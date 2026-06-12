@@ -72,14 +72,15 @@ export default function BookPage() {
             Booking link
           </h2>
           <p className="mt-4 text-muted">
-            {/* PLACEHOLDER: replace with Calendly or Cal.com embed. */}
-            A scheduling embed or booking button will go here.
+            Book a 60-minute meeting directly through TidyCal.
           </p>
           <a
-            href="mailto:hello@angli.site"
+            href="https://tidycal.com/mrangli/60-minute-meeting"
+            target="_blank"
+            rel="noreferrer"
             className="mt-6 inline-flex rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-accent-hover"
           >
-            Email for now
+            Open booking page
           </a>
         </div>
       </section>
