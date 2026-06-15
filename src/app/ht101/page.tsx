@@ -353,33 +353,6 @@ type LensExample = {
 
 const lensExamples: LensExample[] = [
   {
-    country: "Philippines",
-    lens1:
-      "González says the cross arrived with the colonial sword under the Patronato Real. What he misses: indigenization — \"folk Catholicism,\" where saints replaced local nature spirits and a resilient faith grew outside colonial control.",
-    lens2:
-      "The Augustinian missionaries (1565). The cost: destruction of the written past — friars burned pre-colonial records, making the Church both destroyer of the old identity and architect of the new. Interactive element: chant a section of the Pasyon.",
-    lens3:
-      "Theme: the Suffering Christ. The Dolorosa and the Crucified Christ resonated under colonial hardship; the church transformed it into Bayanihan — a theology of communal endurance. Class question: when does a suffering faith teach resignation, and when does it drive social change?",
-  },
-  {
-    country: "Myanmar (Burma)",
-    lens1:
-      "González highlights frontier missions carried by persistent individuals at great personal cost. What he misses: Christianity was often adopted by ethnic minorities (like the Karen) as resistance to the Burman majority — the church as socio-political identity.",
-    lens2:
-      "Adoniram Judson (19th c.). The cost: total alienation — years in Burmese prison, family loss, and a lasting \"foreign religion\" stigma. Interactive element: recite a stanza of a hymn Judson translated into Burmese.",
-    lens3:
-      "Theme: mission to the margins. Arrived via missionary focus on the hill tribes; the church became the community lifeline for education and healthcare. Class question: when does a church's identity shift from \"global\" to \"national\"?",
-  },
-  {
-    country: "China",
-    lens1:
-      "González ties the Nestorian mission's spread to Tang-dynasty imperial favor. What he misses: the experiential adaptation — converts blending Christian practice with Buddhist and Taoist concepts into a hybrid faith that outlived imperial mandates.",
-    lens2:
-      "Matteo Ricci (late 16th c.). The cost: cultural compromise — permitting ancestor veneration led to the Rites Controversy, expulsion of missionaries, and centuries of distrust of \"foreign\" Christianity. Interactive element: a contemplative chant in the Jingjiao scholar-monk style.",
-    lens3:
-      "Theme: the church as state partner. Imperial patronage brought legitimacy — González's \"temptation of power.\" Today's house churches invert it, finding identity outside state sponsorship. Class question: is the church healthier as state ally or persecuted minority?",
-  },
-  {
     country: "USA",
     lens1:
       "González praises the Voluntary Principle — the church thrives without state support. What he misses: \"marketplace religion,\" where dependence on donations rewards spectacle and populist fervor over theological depth.",
@@ -387,15 +360,6 @@ const lensExamples: LensExample[] = [
       "Charles Finney and the Second Great Awakening. The cost: loss of liturgical depth — \"new measures\" prioritized individual emotional conversion, fragmenting the church into competing denominations. Interactive element: a revival chorus or altar-call style prayer.",
     lens3:
       "Theme: priesthood of all believers, taken to a lay-led extreme — empowering activism while weakening theological consistency. Class question: does it unify your church, or erode accountability?",
-  },
-  {
-    country: "Germany",
-    lens1:
-      "González frames Germany as the cradle of the Reformation and Sola Scriptura. What he misses: the secularizing side-effect — empowering the individual reader opened space for the Enlightenment and a deeply secular society.",
-    lens2:
-      "Martin Luther (1517). The cost: religious fragmentation — the Thirty Years' War and the permanent fracture of Western Christendom. Interactive element: sing a stanza of Ein feste Burg ist unser Gott.",
-    lens3:
-      "Theme: priesthood of all believers, now entangled with the Kirchensteuer church tax. Class question: how does a church on the state payroll keep a prophetic voice?",
   },
 ];
 
