@@ -391,13 +391,22 @@ export default function Ht101Page() {
             textbook: Gonzalez, <em>The Story of Christianity, Vol. 1</em>.
           </p>
         </div>
-        <a
-          href="/HIS592-Syllabus.pdf"
-          download
-          className="mt-6 inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
-        >
-          Download the Syllabus (PDF)
-        </a>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <a
+            href="/HIS592-Syllabus.pdf"
+            download
+            className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+          >
+            Download the Syllabus (PDF)
+          </a>
+          <a
+            href="/HIS592-Schedule.pdf"
+            download
+            className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+          >
+            Download the Schedule (PDF)
+          </a>
+        </div>
       </section>
 
       <section className="mx-auto max-w-4xl rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5 sm:p-10">
@@ -671,83 +680,166 @@ export default function Ht101Page() {
       <section className="mx-auto max-w-6xl space-y-6">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">
+            Historical Figure Project
+          </p>
+          <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl">
+            Profile one person from church history
+          </h2>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
+            Choose one historical figure from any period of church history —
+            including the Puritan or missionary era. The context can be a
+            movement, school, or tradition. All projects include a brief AI
+            Use Report.
+          </p>
+        </div>
+
+        <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
+          <p className="text-sm font-medium text-accent">
+            Recorded presentation, live presentation, or short written profile — format approved by instructor
+          </p>
+          <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
+            <p>Your project should present:</p>
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>
+                Who they were — their theology, ministry, congregation,
+                family, and failures.
+              </li>
+              <li>
+                What their life and ministry taught you about your own life
+                or ministry.
+              </li>
+              <li>
+                At least 1–2 changes in perspective, or things you will do
+                differently as a result.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">
             Final Project · 40%
           </p>
           <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl">
-            Choose your track at the start of the course
+            Ministry Video Reflection
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-            Both tracks are due July 8, 2026, and both include a brief AI Use
-            Report — one paragraph naming what tool you used, how, and what
-            you verified manually.
+            Due July 8, 2026. Includes a brief AI Use Report — one paragraph
+            naming what tool you used, how, and what you verified manually.
+          </p>
+        </div>
+
+        <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
+          <h3 className="font-serif text-2xl font-semibold text-ink">
+            Ministry Track
+          </h3>
+          <p className="mt-2 text-sm font-medium text-accent">
+            Video (5 min) + 1-page ministry memo + AI Use Report
+          </p>
+          <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
+            <p>Create a video presenting:</p>
+            <ol className="list-decimal space-y-2 pl-5">
+              <li>1–2 key takeaways from the course.</li>
+              <li>
+                How you would apply parts of the course to your current or
+                future ministry.
+              </li>
+            </ol>
+            <p>
+              The 1-page memo is for your own reflection — a chance to think
+              through what you learned before recording.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl space-y-6">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-accent">
+            Submissions
+          </p>
+          <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight text-ink sm:text-4xl">
+            Upload your work
+          </h2>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
+            Use the links below to submit each assignment to the shared Google
+            Drive folder.
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
             <h3 className="font-serif text-2xl font-semibold text-ink">
-              Ministry Track
+              González Review
             </h3>
             <p className="mt-2 text-sm font-medium text-accent">
-              Video (8–10 min) + 1-page ministry memo + AI Use Report
+              Group presentation on assigned reading block
             </p>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
-              <p>
-                Choose one historical figure from any period of church history
-                — including the Puritan or missionary era. Your video should
-                present:
-              </p>
-              <ol className="list-decimal space-y-2 pl-5">
-                <li>
-                  Who they were — their theology, ministry, congregation,
-                  family, and failures.
-                </li>
-                <li>
-                  What their life and ministry taught you about your own life
-                  or ministry.
-                </li>
-                <li>
-                  At least 1–2 changes in perspective, or things you will do
-                  differently as a result.
-                </li>
-              </ol>
-              <p>
-                Make it suitable for sharing with your congregation or
-                ministry supporters.
-              </p>
-            </div>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Presented in class — upload your slides after.
+            </p>
+            <a
+              href="#"
+              className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+            >
+              Upload Slides / PDF →
+            </a>
           </div>
 
           <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
             <h3 className="font-serif text-2xl font-semibold text-ink">
-              Research / PhD Track
+              Person Project
             </h3>
             <p className="mt-2 text-sm font-medium text-accent">
-              Proposal (4–5 pp.) + 5-min live pitch + 3-min peer Q&amp;A + AI
-              Use Report
+              Historical figure profile
             </p>
-            <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
-              <p>
-                Write a research proposal for a specific doctoral program,
-                including:
-              </p>
-              <ol className="list-decimal space-y-2 pl-5">
-                <li>
-                  A gap in the existing historical narrative, with specific
-                  González page citations.
-                </li>
-                <li>
-                  Why the gap matters, with a brief evaluation of two existing
-                  scholarly works.
-                </li>
-                <li>Proposed methodology and sources.</li>
-                <li>
-                  Why this specific program, based on faculty profiles or
-                  recent dissertations.
-                </li>
-              </ol>
-              <p>Defend it in a 5-minute pitch with 3 minutes of peer Q&amp;A.</p>
-            </div>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Presented in class — upload your slides after.
+            </p>
+            <a
+              href="#"
+              className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+            >
+              Upload Slides / PDF →
+            </a>
+          </div>
+
+          <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
+            <h3 className="font-serif text-2xl font-semibold text-ink">
+              Country Project
+            </h3>
+            <p className="mt-2 text-sm font-medium text-accent">
+              Home country / region Three Lenses presentation
+            </p>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Presented in class — upload your slides after.
+            </p>
+            <a
+              href="#"
+              className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+            >
+              Upload Slides / PDF →
+            </a>
+          </div>
+
+          <div className="rounded-[2rem] border border-line bg-card p-8 shadow-sm shadow-ink/5">
+            <h3 className="font-serif text-2xl font-semibold text-ink">
+              Video Upload
+            </h3>
+            <p className="mt-2 text-sm font-medium text-accent">
+              Ministry Video Reflection
+            </p>
+            <p className="mt-3 text-sm leading-6 text-muted">
+              Upload your video and memo by July 8, 2026.
+            </p>
+            <a
+              href="#"
+              className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
+            >
+              Upload Video + Memo →
+            </a>
           </div>
         </div>
       </section>
