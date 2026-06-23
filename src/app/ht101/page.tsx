@@ -781,7 +781,7 @@ export default function Ht101Page() {
               Presented in class — upload your slides after.
             </p>
             <a
-              href="#"
+              href="https://drive.google.com/drive/folders/1Fvs4Wy_XoJNAWiQ-QXGk6AJOw2b9a5Wu?usp=sharing"
               className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
             >
               Upload Slides / PDF →
@@ -799,7 +799,7 @@ export default function Ht101Page() {
               Presented in class — upload your slides after.
             </p>
             <a
-              href="#"
+              href="https://drive.google.com/drive/folders/1fYqZ4CuOpgMM0hIYoiaokZZLXJe3JWBZ?usp=sharing"
               className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
             >
               Upload Slides / PDF →
@@ -817,7 +817,7 @@ export default function Ht101Page() {
               Presented in class — upload your slides after.
             </p>
             <a
-              href="#"
+              href="https://drive.google.com/drive/folders/10fLYKDI0tOVtfOqFLCAqVyad6PHI9-1K?usp=sharing"
               className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
             >
               Upload Slides / PDF →
@@ -835,7 +835,7 @@ export default function Ht101Page() {
               Upload your video and memo by July 8, 2026.
             </p>
             <a
-              href="#"
+              href="https://drive.google.com/drive/folders/1YoOJcSSINqTMLuCX2xrld6vyQSPM0HX-?usp=sharing"
               className="mt-5 inline-flex rounded-full border border-line bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
             >
               Upload Video + Memo →
