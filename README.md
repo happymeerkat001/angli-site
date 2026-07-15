@@ -27,6 +27,19 @@ npm run build
    - Install command: `npm install`
    - Output: Next.js default
 
+### Private HT101 archive
+
+`/ht101` and its course PDFs are protected with HTTP Basic Authentication.
+Before deploying, add these Production environment variables in Vercel:
+
+- `HT101_ARCHIVE_USER`
+- `HT101_ARCHIVE_PASSWORD`
+
+After deployment, open `https://angli.site/ht101` and enter those credentials
+in the browser prompt. The full 2026 course-folder backup is stored privately
+at `r2:skool-archive/ht101-2026`; it is intentionally not committed to this
+repository or deployed with the site because it is approximately 610 MiB.
+
 ## Editing content
 
 Most public copy lives in `src/app/**/page.tsx`. Shared navigation and footer links live in `src/components/Nav.tsx` and `src/components/Footer.tsx`.

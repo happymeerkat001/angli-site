@@ -17,9 +17,13 @@ type Lesson = {
 };
 
 export const metadata: Metadata = {
-  title: "HIS592 · World Church History I",
+  title: "HT101 Archive · World Church History I",
   description:
-    "Student-facing course hub for HIS592 World Church History I with readings and curated lesson videos.",
+    "Private course archive for HIS592 World Church History I.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const lessons: Lesson[] = [
@@ -367,9 +371,9 @@ export default function Ht101Page() {
   return (
     <div className="space-y-14">
       <Hero
-        eyebrow="HIS592 · World Church History I"
-        title="Church history for people who want more than a timeline."
-        subtitle="Asia Pacific Theological Seminary · Dr. Ang Li · June 20 - July 7, 2026"
+        eyebrow="Private archive · HIS592 · World Church History I"
+        title="Course archive: church history beyond a timeline."
+        subtitle="Asia Pacific Theological Seminary · Dr. Ang Li · taught June 20 - July 7, 2026"
         primaryCta={{ href: "/book", label: "Contact Dr. Li" }}
       />
 
@@ -393,14 +397,14 @@ export default function Ht101Page() {
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
           <a
-            href="/HIS592-Syllabus.pdf"
+            href="/ht101-assets/HIS592-Syllabus.pdf"
             download
             className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
           >
             Download the Syllabus (PDF)
           </a>
           <a
-            href="/HIS592-Schedule.pdf"
+            href="/ht101-assets/HIS592-Schedule.pdf"
             download
             className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
           >
