@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const links = [
-  { href: "/ht101", label: "Archive" },
+  { href: "/ht101", label: "Archive", prefetch: false },
   { href: "/projects", label: "Projects" },
   { href: "/real-estate", label: "Real Estate" },
   { href: "/about", label: "About" },
@@ -21,6 +21,7 @@ export function Footer() {
             <Link
               key={link.href}
               href={link.href}
+              prefetch={link.prefetch}
               className="transition-colors duration-200 hover:text-accent"
             >
               {link.label}

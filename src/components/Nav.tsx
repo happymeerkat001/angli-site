@@ -6,7 +6,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const links = [
-  { href: "/ht101", label: "Archive" },
+  { href: "/ht101", label: "Archive", prefetch: false },
   { href: "/projects", label: "Projects" },
   { href: "/real-estate", label: "Real Estate" },
   { href: "/about", label: "About" },
@@ -35,6 +35,7 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={link.prefetch}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                     isActive
                       ? "bg-ink text-white"
@@ -64,6 +65,7 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={link.prefetch}
                   className={`rounded-2xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
                     isActive
                       ? "bg-ink text-white"
