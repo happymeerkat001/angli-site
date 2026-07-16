@@ -26,7 +26,7 @@ function isAuthorized(authorization: string | null, protection: Protection) {
 }
 
 export function middleware(request: NextRequest) {
-  const isDashboard = request.nextUrl.pathname.startsWith("/today");
+  const isDashboard = request.nextUrl.pathname.startsWith("/personal");
   const protection: Protection = isDashboard
     ? {
         username: process.env.DASHBOARD_USER,
@@ -51,5 +51,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/ht101/:path*", "/ht101-assets/:path*", "/today/:path*"],
+  matcher: ["/ht101/:path*", "/ht101-assets/:path*", "/personal/:path*"],
 };

@@ -11,6 +11,7 @@ const links = [
   { href: "/real-estate", label: "Real Estate" },
   { href: "/about", label: "About" },
   { href: "/book", label: "Book" },
+  { href: "/personal", label: "Personal", prefetch: false },
 ];
 
 export function Nav() {

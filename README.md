@@ -42,11 +42,12 @@ repository or deployed with the site because it is approximately 610 MiB.
 
 ### Daily briefing and private calendar
 
-The public home page includes headline-only news panels, flexible Google Flights
-search links, and a PadSplit shortcut. Google Flights does not expose a public
-website API for live fares, so the links open its own flexible-date search UI.
+The public home page includes headline-only news panels and a PadSplit shortcut.
+Philippines news, flexible Google Flights searches, and the calendar are private
+to the `Personal` tab. Google Flights does not expose a public website API for
+live fares, so its private links open the flexible-date search UI.
 
-`/today` is a separate private calendar view. Before deploying it, set these
+`/personal` is a separate private dashboard. Before deploying it, set these
 Vercel environment variables:
 
 - `DASHBOARD_USER`
@@ -60,7 +61,8 @@ Create a Google Cloud OAuth client with only the read-only Calendar scope, then
 store its refresh token as `GOOGLE_CALENDAR_REFRESH_TOKEN`. Do not use a
 `NEXT_PUBLIC_` prefix for any calendar variable. Events that exist only in
 Apple Calendar/iCloud must be shared or subscribed into Google Calendar before
-they can appear in the dashboard.
+they can appear in the dashboard. `/personal` uses its own dashboard credentials;
+HT101 continues to use `HT101_ARCHIVE_USER` and `HT101_ARCHIVE_PASSWORD`.
 
 ## Editing content
 
