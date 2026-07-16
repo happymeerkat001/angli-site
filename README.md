@@ -40,6 +40,28 @@ in the browser prompt. The full 2026 course-folder backup is stored privately
 at `r2:skool-archive/ht101-2026`; it is intentionally not committed to this
 repository or deployed with the site because it is approximately 610 MiB.
 
+### Daily briefing and private calendar
+
+The public home page includes headline-only news panels, flexible Google Flights
+search links, and a PadSplit shortcut. Google Flights does not expose a public
+website API for live fares, so the links open its own flexible-date search UI.
+
+`/today` is a separate private calendar view. Before deploying it, set these
+Vercel environment variables:
+
+- `DASHBOARD_USER`
+- `DASHBOARD_PASSWORD`
+- `GOOGLE_CALENDAR_CLIENT_ID`
+- `GOOGLE_CALENDAR_CLIENT_SECRET`
+- `GOOGLE_CALENDAR_REFRESH_TOKEN`
+- `GOOGLE_CALENDAR_ID` (optional; defaults to `primary`)
+
+Create a Google Cloud OAuth client with only the read-only Calendar scope, then
+store its refresh token as `GOOGLE_CALENDAR_REFRESH_TOKEN`. Do not use a
+`NEXT_PUBLIC_` prefix for any calendar variable. Events that exist only in
+Apple Calendar/iCloud must be shared or subscribed into Google Calendar before
+they can appear in the dashboard.
+
 ## Editing content
 
 Most public copy lives in `src/app/**/page.tsx`. Shared navigation and footer links live in `src/components/Nav.tsx` and `src/components/Footer.tsx`.
