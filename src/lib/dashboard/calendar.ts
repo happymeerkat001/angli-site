@@ -26,6 +26,12 @@ export function normalizeCalendarEvents(events: GoogleEvent[]): CalendarEvent[] 
     .sort((a, b) => a.start.localeCompare(b.start));
 }
 
+export function calendarTimeMax(now: Date) {
+  const timeMax = new Date(now);
+  timeMax.setDate(timeMax.getDate() + 30);
+  return timeMax;
+}
+
 export async function getCalendarAgenda(): Promise<SourceResult<CalendarEvent[]>> {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
@@ -40,12 +46,10 @@ export async function getCalendarAgenda(): Promise<SourceResult<CalendarEvent[]>
     auth.setCredentials({ refresh_token: refreshToken });
     const calendar = google.calendar({ version: "v3", auth });
     const now = new Date();
-    const timeMax = new Date(now);
-    timeMax.setDate(timeMax.getDate() + 7);
     const response = await calendar.events.list({
       calendarId: process.env.GOOGLE_CALENDAR_ID || "primary",
       timeMin: now.toISOString(),
-      timeMax: timeMax.toISOString(),
+      timeMax: calendarTimeMax(now).toISOString(),
       singleEvents: true,
       orderBy: "startTime",
       maxResults: 15,

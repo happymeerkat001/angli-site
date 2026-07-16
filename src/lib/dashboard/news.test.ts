@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { parseNewsFeed } from "./news";
-import type { NewsSource } from "./types";
+import { mixNewsItems, parseNewsFeed } from "./news";
+import type { NewsItem, NewsSource } from "./types";
 
 const source: NewsSource = {
   id: "dallas-news",
@@ -24,5 +24,18 @@ test("keeps valid unique headlines in newest-first order", () => {
       sourceId: "dallas-news",
     }),
     expect.objectContaining({ title: "Older story" }),
+  ]);
+});
+
+test("mixes headlines from every source newest-first without duplicate links", () => {
+  const items: NewsItem[] = [
+    { id: "dallas", title: "Dallas", url: "https://example.com/dallas", publisher: "Dallas News", publishedAt: "2026-07-02T08:00:00.000Z", sourceId: "dallas-news" },
+    { id: "hoops", title: "Hoops", url: "https://example.com/hoops", publisher: "HoopsHype", publishedAt: "2026-07-03T08:00:00.000Z", sourceId: "hoopshype" },
+    { id: "duplicate", title: "Duplicate", url: "https://example.com/dallas", publisher: "Google News", publishedAt: "2026-07-04T08:00:00.000Z", sourceId: "google-news" },
+  ];
+
+  expect(mixNewsItems(items)).toEqual([
+    expect.objectContaining({ title: "Hoops" }),
+    expect.objectContaining({ title: "Dallas" }),
   ]);
 });

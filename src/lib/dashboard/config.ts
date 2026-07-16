@@ -21,7 +21,6 @@ export const newsSources: NewsSource[] = [
   { id: "crosscheck", label: "CrossCheck", feedUrl: googleNewsSearch("site:crosscheck.news") },
   { id: "google-news", label: "Google News", feedUrl: googleNewsSearch() },
   { id: "hoopshype", label: "HoopsHype", feedUrl: googleNewsSearch("site:hoopshype.com") },
-  { id: "philippines", label: "Philippines", feedUrl: googleNewsSearch("Philippines") },
 ];
 
 export const flightRoutes: FlightRoute[] = [
@@ -32,15 +31,8 @@ export const flightRoutes: FlightRoute[] = [
 ];
 
 export const fareSearch = {
-  departureDate: "2026-06-15",
-  returnDate: "2026-07-06",
+  departureDate: "2027-06-18",
+  returnDate: "2027-07-09",
   adults: 1,
   cabin: "ECONOMY",
 } as const;
-
-export function googleFlightsUrl(route: FlightRoute) {
-  const flight = `${route.origin}.${route.destination}.${fareSearch.departureDate}`;
-  const returnFlight = `${route.destination}.${route.origin}.${fareSearch.returnDate}`;
-
-  return `https://www.google.com/travel/flights#flt=${flight}*${returnFlight};c:USD;e:1;sd:1;t:f`;
-}

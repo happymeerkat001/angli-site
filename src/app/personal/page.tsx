@@ -1,7 +1,9 @@
-import { CalendarDays, ExternalLink, MapPin, Plane } from "lucide-react";
+import { CalendarDays, MapPin, Newspaper, Plane } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { getFlightDashboard } from "@/lib/dashboard/flights";
-import { getNewsDashboard } from "@/lib/dashboard/news";
+import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Personal",
@@ -9,60 +11,74 @@ export const metadata = {
 };
 
 export default async function PersonalPage() {
-  const [news, flights, agenda] = await Promise.all([
-    getNewsDashboard(),
-    getFlightDashboard(),
+  const [agenda, flights, news] = await Promise.all([
     getCalendarAgenda(),
+    getFlightDashboard(),
+    getNewsDashboard(),
   ]);
+  const headlines = mixNewsItems(
+    Object.values(news).flatMap((result) => result.status === "ok" ? result.value : []),
+  );
 
   return (
     <div className="mx-auto max-w-6xl space-y-12">
       <section>
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Personal</p>
         <h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-ink">Personal dashboard</h1>
-        <p className="mt-4 max-w-2xl text-lg text-muted">Philippines news, flexible travel searches, and your upcoming calendar.</p>
       </section>
 
-      <section aria-labelledby="philippines-heading">
-        <div className="mb-7 flex items-center gap-3">
-          <Plane className="text-accent" size={22} aria-hidden="true" />
+      <section aria-labelledby="news-heading">
+        <div className="mb-6 flex items-center gap-3">
+          <Newspaper className="text-accent" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Philippines & travel</p>
-            <h2 id="philippines-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">DFW flexible June searches</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Daily briefing</p>
+            <h2 id="news-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Mixed headlines</h2>
           </div>
         </div>
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_1.9fr]">
-          <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
-            <h3 className="font-serif text-xl font-semibold text-ink">Philippines news</h3>
-            {news.philippines.status === "ok" ? (
-              <ul className="mt-5 space-y-4">
-                {news.philippines.value.map((item) => (
-                  <li key={item.id}>
-                    <a href={item.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-ink hover:text-accent">
-                      {item.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="mt-5 text-sm text-muted">{news.philippines.message}</p>}
-          </section>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {flights.map((flight) => (
-              <a key={flight.destination} href={flight.searchUrl} target="_blank" rel="noreferrer" className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5 transition hover:-translate-y-1 hover:border-accent/30 hover:shadow-lg">
-                <p className="text-sm font-semibold text-accent">{flight.origin} → {flight.destination}</p>
-                <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">{flight.label}</h3>
-                <p className="mt-3 text-sm text-muted">{flight.departureDate} – {flight.returnDate} · Economy · 1 adult</p>
-                <p className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent">Search flexible fares in Google Flights <ExternalLink size={15} aria-hidden="true" /></p>
-              </a>
-            ))}
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {headlines.length > 0 ? (
+            <ul className="grid gap-x-8 divide-y divide-line md:grid-cols-2 md:divide-y-0">
+              {headlines.map((item) => (
+                <li key={item.id} className="py-4 first:pt-0 md:border-b md:border-line md:[&:nth-child(2)]:pt-0">
+                  <a href={item.url} target="_blank" rel="noreferrer" className="text-sm font-medium leading-5 text-ink hover:text-accent">
+                    {item.title}
+                    <span className="mt-1 block text-xs font-normal text-muted">{item.publisher}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-sm text-muted">News temporarily unavailable.</p>}
+        </section>
+      </section>
+
+      <section aria-labelledby="fares-heading">
+        <div className="mb-6 flex items-center gap-3">
+          <Plane className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
+            <h2 id="fares-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest June–July fares</h2>
           </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {flights.map((flight) => (
+            <section key={flight.destination} className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+              <p className="text-sm font-semibold text-accent">{flight.origin} → {flight.destination}</p>
+              <h3 className="mt-2 font-serif text-2xl font-semibold text-ink">{flight.label}</h3>
+              {flight.status === "available" ? (
+                <>
+                  <p className="mt-5 font-serif text-4xl font-semibold text-ink">${flight.amount?.toLocaleString()}</p>
+                  <p className="mt-2 text-sm text-muted">Cheapest {flight.stops === 0 ? "nonstop" : "one-stop"} fare</p>
+                </>
+              ) : <p className="mt-5 text-sm text-muted">Live price unavailable today.</p>}
+            </section>
+          ))}
         </div>
       </section>
 
       <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="calendar-heading">
         <div className="flex items-center gap-3">
           <CalendarDays className="text-accent" aria-hidden="true" />
-          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next seven days</h2>
+          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 30 days</h2>
         </div>
         {agenda.status === "ok" ? (
           agenda.value.length > 0 ? (
@@ -75,14 +91,8 @@ export default async function PersonalPage() {
                 </li>
               ))}
             </ul>
-          ) : <p className="mt-6 text-muted">Nothing scheduled in the next seven days.</p>
-        ) : (
-          <div className="mt-6 rounded-2xl bg-paper p-5 text-sm text-muted">
-            <p>{agenda.message}.</p>
-            <p className="mt-2">Add the read-only Google Calendar OAuth client ID, client secret, and refresh token as server-only Vercel environment variables to enable this view.</p>
-            <a className="mt-3 inline-flex items-center gap-2 font-semibold text-accent hover:text-accent-hover" href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank" rel="noreferrer">Open Google Calendar API setup <ExternalLink size={14} aria-hidden="true" /></a>
-          </div>
-        )}
+          ) : <p className="mt-6 text-muted">Nothing scheduled in the next 30 days.</p>
+        ) : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
       </section>
     </div>
   );

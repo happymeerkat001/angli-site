@@ -57,6 +57,19 @@ export function parseNewsFeed(xml: string, source: NewsSource): NewsItem[] {
     .slice(0, 5);
 }
 
+export function mixNewsItems(items: NewsItem[], limit = 16): NewsItem[] {
+  const seen = new Set<string>();
+
+  return [...items]
+    .filter((item) => {
+      if (seen.has(item.url)) return false;
+      seen.add(item.url);
+      return true;
+    })
+    .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""))
+    .slice(0, limit);
+}
+
 export async function getNewsSource(source: NewsSource): Promise<SourceResult<NewsItem[]>> {
   try {
     const response = await fetch(source.feedUrl, {

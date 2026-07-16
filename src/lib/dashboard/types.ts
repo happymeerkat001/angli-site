@@ -2,8 +2,7 @@ export type NewsSourceId =
   | "dallas-news"
   | "crosscheck"
   | "google-news"
-  | "hoopshype"
-  | "philippines";
+  | "hoopshype";
 
 export type NewsSource = {
   id: NewsSourceId;
@@ -29,11 +28,11 @@ export type FlightRoute = {
 export type FlightSnapshot = FlightRoute & {
   fetchedAt: string;
   amount: number | null;
-  currency: string | null;
+  currency: "USD" | null;
   departureDate: string;
   returnDate: string;
-  searchUrl: string;
-  status: "available" | "search-only" | "unavailable";
+  stops: number | null;
+  status: "available" | "unavailable";
 };
 
 export type CalendarEvent = {
