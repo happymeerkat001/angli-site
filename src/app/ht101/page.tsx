@@ -638,7 +638,7 @@ export default function Ht101Page() {
             Model presentations
           </h3>
           <p className="text-sm text-muted">
-            Five worked examples of the Three Lenses format. Use them as
+            A worked example of the Three Lenses format. Use it as
             scaffolding for structure and tone — your group&apos;s judgment
             about what González misses is the part that can&apos;t be
             borrowed.
@@ -730,8 +730,9 @@ export default function Ht101Page() {
             Ministry Video Reflection
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-            Due July 8, 2026. Includes a brief AI Use Report — one paragraph
-            naming what tool you used, how, and what you verified manually.
+            Was due July 8, 2026 — the submission window has closed. Included
+            a brief AI Use Report — one paragraph naming what tool you used,
+            how, and what you verified manually.
           </p>
         </div>
 
@@ -768,8 +769,8 @@ export default function Ht101Page() {
             Upload your work
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-            Use the links below to submit each assignment to the shared Google
-            Drive folder.
+            The course has concluded and submissions are closed. The links
+            below remain for late uploads by prior arrangement with Dr. Li.
           </p>
         </div>
 
@@ -836,7 +837,8 @@ export default function Ht101Page() {
               Ministry Video Reflection
             </p>
             <p className="mt-3 text-sm leading-6 text-muted">
-              Upload your video and memo by July 8, 2026.
+              Submissions closed July 8, 2026. Late uploads by prior
+              arrangement only.
             </p>
             <a
               href="https://drive.google.com/drive/folders/1YoOJcSSINqTMLuCX2xrld6vyQSPM0HX-?usp=sharing"
