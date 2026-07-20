@@ -33,14 +33,6 @@ const projects = [
       "Teachers need help turning scattered source material into coherent, reusable preparation.",
     status: "In progress",
   },
-  {
-    title: "Future Project",
-    summary:
-      "A reserved space for the next practical tool that earns its way onto the site.",
-    problem:
-      "The site should leave room for growth without pretending every idea is already mature.",
-    status: "Placeholder",
-  },
 ];
 
 export default function ProjectsPage() {

@@ -1,4 +1,10 @@
-import { BookOpen, Bot, CalendarDays, HomeIcon } from "lucide-react";
+import {
+  BookOpen,
+  Bot,
+  CalendarDays,
+  ExternalLink,
+  HomeIcon,
+} from "lucide-react";
 import { Hero } from "@/components/Hero";
 import { SectionCard } from "@/components/SectionCard";
 
@@ -50,6 +56,12 @@ export default function Home() {
           <SectionCard key={section.href} {...section} />
         ))}
       </section>
+
+      <p className="mx-auto max-w-6xl text-center text-sm text-muted">
+        <a href="https://happymeerkat001.github.io/padsplit-scrapper/index.html" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 font-semibold text-accent hover:text-accent-hover">
+          Open PadSplit dashboard <ExternalLink size={15} aria-hidden="true" />
+        </a>
+      </p>
     </div>
   );
 }

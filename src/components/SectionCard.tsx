@@ -17,6 +17,7 @@ export function SectionCard({
   return (
     <Link
       href={href}
+      prefetch={href !== "/ht101"}
       className="group rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5 transition duration-200 hover:-translate-y-1 hover:border-accent/25 hover:shadow-lg hover:shadow-ink/8"
     >
       <div className="mb-8 inline-flex size-12 items-center justify-center rounded-2xl bg-paper text-accent transition-colors duration-200 group-hover:bg-accent group-hover:text-white">

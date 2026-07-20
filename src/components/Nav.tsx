@@ -6,11 +6,12 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const links = [
-  { href: "/ht101", label: "HT101" },
+  { href: "/ht101", label: "HT101", prefetch: false },
   { href: "/projects", label: "Projects" },
   { href: "/real-estate", label: "Real Estate" },
   { href: "/about", label: "About" },
   { href: "/book", label: "Book" },
+  { href: "/personal", label: "Personal", prefetch: false },
 ];
 
 export function Nav() {
@@ -19,7 +20,7 @@ export function Nav() {
 
   return (
     <header className="fixed left-0 right-0 top-4 z-50 px-4">
-      <nav className="mx-auto max-w-6xl rounded-full border border-line/80 bg-white/82 px-4 py-3 shadow-sm shadow-ink/5 backdrop-blur-xl">
+      <nav className="mx-auto max-w-6xl rounded-full border border-line/80 bg-white/95 px-4 py-3 shadow-sm shadow-ink/5 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-4">
           <Link
             href="/"
@@ -35,9 +36,11 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={link.prefetch}
+                  aria-current={isActive ? "page" : undefined}
                   className={`rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                     isActive
-                      ? "bg-ink text-white"
+                      ? "bg-accent font-semibold text-white"
                       : "text-muted hover:bg-paper hover:text-ink"
                   }`}
                 >
@@ -48,7 +51,7 @@ export function Nav() {
           </div>
           <button
             type="button"
-            className="inline-flex size-10 items-center justify-center rounded-full border border-line text-ink transition-colors duration-200 hover:bg-paper md:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full bg-ink text-white shadow-sm shadow-ink/20 transition-colors duration-200 hover:bg-accent md:hidden"
             aria-label="Toggle navigation"
             aria-expanded={isOpen}
             onClick={() => setIsOpen((current) => !current)}
@@ -64,9 +67,11 @@ export function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`rounded-2xl px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+                  prefetch={link.prefetch}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`rounded-2xl px-4 py-3 text-base font-medium transition-colors duration-200 ${
                     isActive
-                      ? "bg-ink text-white"
+                      ? "bg-accent font-semibold text-white"
                       : "text-muted hover:bg-paper hover:text-ink"
                   }`}
                   onClick={() => setIsOpen(false)}

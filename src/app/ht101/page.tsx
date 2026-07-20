@@ -17,9 +17,13 @@ type Lesson = {
 };
 
 export const metadata: Metadata = {
-  title: "HIS592 · World Church History I",
+  title: "HT101 Archive · World Church History I",
   description:
-    "Student-facing course hub for HIS592 World Church History I with readings and curated lesson videos.",
+    "Private course archive for HIS592 World Church History I.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const lessons: Lesson[] = [
@@ -367,9 +371,9 @@ export default function Ht101Page() {
   return (
     <div className="space-y-14">
       <Hero
-        eyebrow="HIS592 · World Church History I"
-        title="Church history for people who want more than a timeline."
-        subtitle="Asia Pacific Theological Seminary · Dr. Ang Li · June 20 - July 7, 2026"
+        eyebrow="Private archive · HIS592 · World Church History I"
+        title="Course archive: church history beyond a timeline."
+        subtitle="Asia Pacific Theological Seminary · Dr. Ang Li · taught June 20 - July 7, 2026"
         primaryCta={{ href: "/book", label: "Contact Dr. Li" }}
       />
 
@@ -393,14 +397,14 @@ export default function Ht101Page() {
         </div>
         <div className="mt-6 flex flex-wrap gap-3">
           <a
-            href="/HIS592-Syllabus.pdf"
+            href="/ht101-assets/HIS592-Syllabus.pdf"
             download
             className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
           >
             Download the Syllabus (PDF)
           </a>
           <a
-            href="/HIS592-Schedule.pdf"
+            href="/ht101-assets/HIS592-Schedule.pdf"
             download
             className="inline-flex rounded-full border border-line bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors duration-200 hover:border-accent hover:text-accent"
           >
@@ -634,7 +638,7 @@ export default function Ht101Page() {
             Model presentations
           </h3>
           <p className="text-sm text-muted">
-            Five worked examples of the Three Lenses format. Use them as
+            A worked example of the Three Lenses format. Use it as
             scaffolding for structure and tone — your group&apos;s judgment
             about what González misses is the part that can&apos;t be
             borrowed.
@@ -726,8 +730,9 @@ export default function Ht101Page() {
             Ministry Video Reflection
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-            Due July 8, 2026. Includes a brief AI Use Report — one paragraph
-            naming what tool you used, how, and what you verified manually.
+            Was due July 8, 2026 — the submission window has closed. Included
+            a brief AI Use Report — one paragraph naming what tool you used,
+            how, and what you verified manually.
           </p>
         </div>
 
@@ -764,8 +769,8 @@ export default function Ht101Page() {
             Upload your work
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-7 text-muted">
-            Use the links below to submit each assignment to the shared Google
-            Drive folder.
+            The course has concluded and submissions are closed. The links
+            below remain for late uploads by prior arrangement with Dr. Li.
           </p>
         </div>
 
@@ -832,7 +837,8 @@ export default function Ht101Page() {
               Ministry Video Reflection
             </p>
             <p className="mt-3 text-sm leading-6 text-muted">
-              Upload your video and memo by July 8, 2026.
+              Submissions closed July 8, 2026. Late uploads by prior
+              arrangement only.
             </p>
             <a
               href="https://drive.google.com/drive/folders/1YoOJcSSINqTMLuCX2xrld6vyQSPM0HX-?usp=sharing"
