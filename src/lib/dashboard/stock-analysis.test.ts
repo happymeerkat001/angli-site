@@ -18,6 +18,11 @@ test("parses strict JSON analysis wrapped in markdown fences", () => {
     .toEqual({ analysis: "Momentum remains strong.", limitSellPrice: 325.5 });
 });
 
+test("extracts a valid analysis object from chatty model text", () => {
+  expect(parseStockAnalysis("Here is the requested result:\n\n{\"analysis\":\"Hold while monitoring earnings.\",\"limit_sell\":320}\n\nThis is not financial advice."))
+    .toEqual({ analysis: "Hold while monitoring earnings.", limitSellPrice: 320 });
+});
+
 test("fails closed when analysis is not configured", async () => {
   delete process.env.STOCK_LLM_BASE_URL;
   delete process.env.STOCK_LLM_API_KEY;

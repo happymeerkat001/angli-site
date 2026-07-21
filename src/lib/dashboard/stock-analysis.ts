@@ -10,16 +10,44 @@ type ChatResponse = {
   choices?: Array<{ message?: { content?: unknown } }>;
 };
 
+function jsonObjectCandidates(content: string) {
+  const candidates = [content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")];
+  for (let start = content.indexOf("{"); start >= 0; start = content.indexOf("{", start + 1)) {
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let end = start; end < content.length; end += 1) {
+      const character = content[end];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === "\"") inString = false;
+        continue;
+      }
+      if (character === "\"") inString = true;
+      else if (character === "{") depth += 1;
+      else if (character === "}" && --depth === 0) {
+        candidates.push(content.slice(start, end + 1));
+        break;
+      }
+    }
+  }
+  return candidates;
+}
+
 export function parseStockAnalysis(content: unknown): StockAnalysis | null {
   if (typeof content !== "string") return null;
-  const json = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try {
-    const parsed = JSON.parse(json) as { analysis?: unknown; limit_sell?: unknown };
-    if (typeof parsed.analysis !== "string" || typeof parsed.limit_sell !== "number" || parsed.limit_sell <= 0) return null;
-    return { analysis: parsed.analysis.trim(), limitSellPrice: parsed.limit_sell };
-  } catch {
-    return null;
+  for (const candidate of jsonObjectCandidates(content)) {
+    try {
+      const parsed = JSON.parse(candidate) as { analysis?: unknown; limit_sell?: unknown };
+      if (typeof parsed.analysis === "string" && parsed.analysis.trim() && typeof parsed.limit_sell === "number" && Number.isFinite(parsed.limit_sell) && parsed.limit_sell > 0) {
+        return { analysis: parsed.analysis.trim(), limitSellPrice: parsed.limit_sell };
+      }
+    } catch {
+      // Keep searching: chatty model output can contain non-JSON text and other objects.
+    }
   }
+  return null;
 }
 
 export async function getStockAnalysis(snapshot: StockSnapshot, headlines: NewsItem[]): Promise<SourceResult<StockAnalysis>> {
