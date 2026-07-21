@@ -531,6 +531,8 @@ export default function Ht101Page() {
                       rel="noreferrer"
                       className="overflow-hidden rounded-[1.5rem] border border-line bg-paper shadow-sm shadow-ink/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md hover:shadow-ink/10"
                     >
+                      {/* YouTube thumbnails are external and do not benefit from Next.js optimization. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`}
                         alt={video.title}
