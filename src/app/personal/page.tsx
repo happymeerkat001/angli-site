@@ -67,7 +67,7 @@ export default async function PersonalPage() {
           <a href={googleFlightsUrl} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
             Check Google Flights for live prices
           </a>
-          .
+          . Fares tend to be lowest 1–4 months out for domestic hops and 2–8 months out for international routes; prices usually climb fast inside the last 2–3 weeks.
         </p>
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
