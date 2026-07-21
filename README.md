@@ -56,6 +56,8 @@ Vercel environment variables:
 - `GOOGLE_CALENDAR_CLIENT_SECRET`
 - `GOOGLE_CALENDAR_REFRESH_TOKEN`
 - `GOOGLE_CALENDAR_ID` (optional; defaults to `primary`)
+- `SERP_API_KEY` (SerpApi key for live Google Flights fares; without it every
+  route falls back to "Live price unavailable today")
 
 Create a Google Cloud OAuth client with only the read-only Calendar scope, then
 store its refresh token as `GOOGLE_CALENDAR_REFRESH_TOKEN`. Do not use a
