@@ -17,6 +17,8 @@ function durationLabel(durationMinutes: number) {
   return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
+const googleFlightsUrl = "https://www.google.com/travel/flights";
+
 export default async function PersonalPage() {
   const [agenda, anywhere, flights, news] = await Promise.all([
     getCalendarAgenda(),
@@ -60,6 +62,13 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="fares-heading">
+        <p className="mb-4 text-sm text-muted">
+          Prices below can be stale.{" "}
+          <a href={googleFlightsUrl} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
+            Check Google Flights for live prices
+          </a>
+          .
+        </p>
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
           <div>
