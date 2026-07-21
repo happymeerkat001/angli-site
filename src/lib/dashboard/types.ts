@@ -21,8 +21,14 @@ export type NewsItem = {
 
 export type FlightRoute = {
   origin: "DFW";
-  destination: "CRK" | "XIY" | "XUZ" | "TPE";
+  destination: "CRK" | "XIY" | "XUZ" | "SJC";
   label: string;
+};
+
+export type FareWindow = {
+  label: string;
+  departureDate: string;
+  returnDate: string;
 };
 
 export type FlightSnapshot = FlightRoute & {
@@ -46,3 +52,15 @@ export type CalendarEvent = {
 export type SourceResult<T> =
   | { status: "ok"; value: T }
   | { status: "error"; message: string };
+
+export type AnywhereFlightOption = {
+  destination: string;
+  airportCode: string;
+  amount: number;
+  currency: "USD";
+  durationMinutes: number;
+  stops: number;
+  departureDate: string;
+  returnDate: string;
+  windowLabel: string;
+};

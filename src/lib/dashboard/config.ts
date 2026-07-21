@@ -1,4 +1,4 @@
-import type { FlightRoute, NewsSource } from "./types";
+import type { FareWindow, FlightRoute, NewsSource } from "./types";
 
 const googleNewsBaseUrl = "https://news.google.com/rss";
 
@@ -27,7 +27,14 @@ export const flightRoutes: FlightRoute[] = [
   { origin: "DFW", destination: "CRK", label: "Clark, Philippines" },
   { origin: "DFW", destination: "XIY", label: "Xi'an, China" },
   { origin: "DFW", destination: "XUZ", label: "Xuzhou, China" },
-  { origin: "DFW", destination: "TPE", label: "Taipei, Taiwan" },
+  { origin: "DFW", destination: "SJC", label: "San Jose, California" },
+];
+
+export const schoolBreaks: FareWindow[] = [
+  { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13" },
+  { label: "Thanksgiving Break", departureDate: "2026-11-21", returnDate: "2026-11-29" },
+  { label: "Winter Break", departureDate: "2026-12-19", returnDate: "2027-01-06" },
+  { label: "Spring Break", departureDate: "2027-03-13", returnDate: "2027-03-21" },
 ];
 
 export const fareSearch = {

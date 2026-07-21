@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { flightRoutes } from "./config";
+import { fareSearch, flightRoutes } from "./config";
 import { selectLowestEligibleFlight, serpApiFlightsUrl } from "./flights";
 
 test("chooses the cheapest itinerary with at most one stop", () => {
@@ -11,7 +11,11 @@ test("chooses the cheapest itinerary with at most one stop", () => {
 });
 
 test("requests the configured 2027 round-trip search dates", () => {
-  const url = new URL(serpApiFlightsUrl(flightRoutes[0], "test-key"));
+  const url = new URL(serpApiFlightsUrl(flightRoutes[0], "test-key", {
+    label: "Summer",
+    departureDate: fareSearch.departureDate,
+    returnDate: fareSearch.returnDate,
+  }));
 
   expect(url.searchParams.get("outbound_date")).toBe("2027-06-18");
   expect(url.searchParams.get("return_date")).toBe("2027-07-09");

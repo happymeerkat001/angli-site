@@ -1,5 +1,6 @@
 import { CalendarDays, MapPin, Newspaper, Plane } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
+import { getAnywhereDashboard } from "@/lib/dashboard/flights-anywhere";
 import { getFlightDashboard } from "@/lib/dashboard/flights";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 
@@ -10,9 +11,16 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+function durationLabel(durationMinutes: number) {
+  const hours = Math.floor(durationMinutes / 60);
+  const minutes = durationMinutes % 60;
+  return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
 export default async function PersonalPage() {
-  const [agenda, flights, news] = await Promise.all([
+  const [agenda, anywhere, flights, news] = await Promise.all([
     getCalendarAgenda(),
+    getAnywhereDashboard(),
     getFlightDashboard(),
     getNewsDashboard(),
   ]);
@@ -56,7 +64,7 @@ export default async function PersonalPage() {
           <Plane className="text-accent" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
-            <h2 id="fares-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest June–July fares</h2>
+            <h2 id="fares-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest fares</h2>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,11 +76,39 @@ export default async function PersonalPage() {
                 <>
                   <p className="mt-5 font-serif text-4xl font-semibold text-ink">${flight.amount?.toLocaleString()}</p>
                   <p className="mt-2 text-sm text-muted">Cheapest {flight.stops === 0 ? "nonstop" : "one-stop"} fare</p>
+                  <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
                 </>
               ) : <p className="mt-5 text-sm text-muted">Live price unavailable today.</p>}
             </section>
           ))}
         </div>
+      </section>
+
+      <section aria-labelledby="anywhere-heading">
+        <div className="mb-6 flex items-center gap-3">
+          <Plane className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
+            <h2 id="anywhere-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest flights anywhere (≤6h)</h2>
+          </div>
+        </div>
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {anywhere.status === "ok" ? (
+            anywhere.value.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                {anywhere.value.map((flight) => (
+                  <section key={`${flight.airportCode}-${flight.departureDate}-${flight.returnDate}`} className="rounded-[1.5rem] border border-line p-5">
+                    <p className="text-sm font-semibold text-accent">{flight.airportCode}</p>
+                    <h3 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h3>
+                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()}</p>
+                    <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} one way · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
+                    <p className="mt-2 text-sm text-muted">{flight.windowLabel}: {flight.departureDate} – {flight.returnDate}</p>
+                  </section>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted">No nearby flights found for the school breaks.</p>
+          ) : <p className="text-sm text-muted">{anywhere.message}.</p>}
+        </section>
       </section>
 
       <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="calendar-heading">
