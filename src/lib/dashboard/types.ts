@@ -21,7 +21,21 @@ export type NewsItem = {
 
 export type FlightRoute = {
   origin: "DFW";
-  destination: "CRK" | "XIY" | "XUZ" | "SJC";
+  destination: "CRK" | "XIY" | "XUZ";
+  label: string;
+};
+
+export type CaliforniaAirportCode = "SJC" | "SFO" | "SAN";
+
+export type CaliforniaAirport = {
+  origin: "DFW";
+  destination: CaliforniaAirportCode;
+  label: string;
+};
+
+export type FlightSearchRoute = {
+  origin: "DFW";
+  destination: string;
   label: string;
 };
 
@@ -31,13 +45,14 @@ export type FareWindow = {
   returnDate: string;
 };
 
-export type FlightSnapshot = FlightRoute & {
+export type FlightSnapshot = FlightSearchRoute & {
   fetchedAt: string;
   amount: number | null;
   currency: "USD" | null;
   departureDate: string;
   returnDate: string;
   stops: number | null;
+  durationMinutes?: number;
   status: "available" | "unavailable";
 };
 

@@ -1,5 +1,6 @@
 import { expect, test } from "vitest";
-import { serpApiExploreUrl, selectTopAnywhereFlights } from "./flights-anywhere";
+import type { FlightSnapshot } from "./types";
+import { serpApiExploreUrl, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
 
 test("filters, ranks, and caps nearby anywhere-flight results", () => {
   const results = selectTopAnywhereFlights([
@@ -13,8 +14,47 @@ test("filters, ranks, and caps nearby anywhere-flight results", () => {
     { name: "Kansas City", destination_airport: { code: "MCI" }, flight_price: 110, flight_duration: 90, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
   ], "Spring Break");
 
-  expect(results.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "MCI", "BNA", "ORD"]);
+  expect(results.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "MCI", "BNA"]);
   expect(results.every(({ durationMinutes }) => durationMinutes <= 360)).toBe(true);
+});
+
+test("selects the cheapest California fare across airports and school breaks", () => {
+  const availableSnapshot = (destination: string, amount: number, durationMinutes: number): FlightSnapshot => ({
+    origin: "DFW",
+    destination,
+    label: `${destination} California`,
+    fetchedAt: "2026-07-21T00:00:00.000Z",
+    amount,
+    currency: "USD",
+    departureDate: "2027-03-13",
+    returnDate: "2027-03-21",
+    stops: 0,
+    durationMinutes,
+    status: "available",
+  });
+
+  expect(selectLowestCaliforniaFare([
+    { snapshot: availableSnapshot("SJC", 220, 215), windowLabel: "Spring Break" },
+    { snapshot: availableSnapshot("SFO", 180, 240), windowLabel: "Summer Break" },
+    { snapshot: availableSnapshot("SAN", 200, 180), windowLabel: "Winter Break" },
+  ])).toMatchObject({ airportCode: "SFO", amount: 180, windowLabel: "Summer Break" });
+});
+
+test("returns no California slot when every search is unavailable", () => {
+  const unavailable: FlightSnapshot = {
+    origin: "DFW",
+    destination: "SJC",
+    label: "San Jose, California",
+    fetchedAt: "2026-07-21T00:00:00.000Z",
+    amount: null,
+    currency: null,
+    departureDate: "2027-03-13",
+    returnDate: "2027-03-21",
+    stops: null,
+    status: "unavailable",
+  };
+
+  expect(selectLowestCaliforniaFare([{ snapshot: unavailable, windowLabel: "Spring Break" }])).toBeNull();
 });
 
 test("builds an explore request without an arrival airport", () => {

@@ -1,5 +1,6 @@
-import { schoolBreaks } from "./config";
-import type { AnywhereFlightOption, FareWindow, SourceResult } from "./types";
+import { californiaAirports, schoolBreaks } from "./config";
+import { getFlightSnapshot } from "./flights";
+import type { AnywhereFlightOption, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
 type SerpExploreDestination = {
   name?: unknown;
@@ -33,7 +34,7 @@ export function selectTopAnywhereFlights(
   destinations: SerpExploreDestination[],
   windowLabel: string,
   maxDurationMinutes = 360,
-  limit = 5,
+  limit = 4,
 ): AnywhereFlightOption[] {
   return destinations
     .flatMap((destination) => {
@@ -68,6 +69,49 @@ export function selectTopAnywhereFlights(
     .slice(0, limit);
 }
 
+type CaliforniaFareCandidate = {
+  snapshot: FlightSnapshot;
+  windowLabel: string;
+};
+
+export function selectLowestCaliforniaFare(candidates: CaliforniaFareCandidate[]): AnywhereFlightOption | null {
+  const eligible = candidates.flatMap(({ snapshot, windowLabel }) => {
+    if (
+      snapshot.status !== "available" || snapshot.amount === null || snapshot.stops === null
+      || snapshot.durationMinutes === undefined
+    ) return [];
+
+    return [{
+      destination: snapshot.label,
+      airportCode: snapshot.destination,
+      amount: snapshot.amount,
+      currency: "USD" as const,
+      durationMinutes: snapshot.durationMinutes,
+      stops: snapshot.stops,
+      departureDate: snapshot.departureDate,
+      returnDate: snapshot.returnDate,
+      windowLabel,
+    }];
+  });
+
+  return eligible.sort((a, b) => a.amount - b.amount)[0] ?? null;
+}
+
+export async function getCaliforniaFare(): Promise<AnywhereFlightOption | null> {
+  const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
+  if (!apiKey) return null;
+
+  const fetchedAt = new Date().toISOString();
+  const candidates = await Promise.all(californiaAirports.flatMap((airport) => (
+    schoolBreaks.map(async (window) => ({
+      snapshot: await getFlightSnapshot(airport, apiKey, window, fetchedAt),
+      windowLabel: window.label,
+    }))
+  )));
+
+  return selectLowestCaliforniaFare(candidates);
+}
+
 export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereFlightOption[]>> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
@@ -92,11 +136,14 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereFligh
     return { status: "error", message: "Flight search temporarily unavailable" };
   }
 
+  const californiaFare = await getCaliforniaFare();
+  const topExploreFlights = results
+    .flatMap((result) => result.options)
+    .sort((a, b) => a.amount - b.amount)
+    .slice(0, 4);
+
   return {
     status: "ok",
-    value: results
-      .flatMap((result) => result.options)
-      .sort((a, b) => a.amount - b.amount)
-      .slice(0, 5),
+    value: californiaFare ? [...topExploreFlights, californiaFare] : topExploreFlights,
   };
 }

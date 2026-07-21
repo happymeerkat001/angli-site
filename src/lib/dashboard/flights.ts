@@ -1,9 +1,10 @@
 import { fareSearch, flightRoutes, schoolBreaks } from "./config";
-import type { FareWindow, FlightRoute, FlightSnapshot } from "./types";
+import type { FareWindow, FlightSearchRoute, FlightSnapshot } from "./types";
 
 type SerpFlightOption = {
   price?: unknown;
   flights?: unknown;
+  total_duration?: unknown;
 };
 
 type SerpFlightsResponse = {
@@ -14,15 +15,10 @@ type SerpFlightsResponse = {
 type EligibleFlight = {
   amount: number;
   stops: number;
+  durationMinutes?: number;
 };
 
-const fareSearchWindow: FareWindow = {
-  label: "June–July 2027",
-  departureDate: fareSearch.departureDate,
-  returnDate: fareSearch.returnDate,
-};
-
-export function serpApiFlightsUrl(route: FlightRoute, apiKey: string, window: FareWindow) {
+export function serpApiFlightsUrl(route: FlightSearchRoute, apiKey: string, window: FareWindow) {
   const params = new URLSearchParams({
     engine: "google_flights",
     departure_id: route.origin,
@@ -44,13 +40,16 @@ export function selectLowestEligibleFlight(options: SerpFlightOption[]): Eligibl
   const eligible = options.flatMap((option) => {
     const amount = typeof option.price === "number" ? option.price : null;
     const stops = Array.isArray(option.flights) ? Math.max(0, option.flights.length - 1) : null;
-    return amount !== null && stops !== null && stops <= 1 ? [{ amount, stops }] : [];
+    const durationMinutes = typeof option.total_duration === "number" ? option.total_duration : null;
+    return amount !== null && stops !== null && stops <= 1
+      ? [{ amount, stops, ...(durationMinutes !== null ? { durationMinutes } : {}) }]
+      : [];
   });
 
   return eligible.sort((a, b) => a.amount - b.amount)[0] ?? null;
 }
 
-function unavailableSnapshot(route: FlightRoute, fetchedAt: string, window: FareWindow): FlightSnapshot {
+function unavailableSnapshot(route: FlightSearchRoute, fetchedAt: string, window: FareWindow): FlightSnapshot {
   return {
     ...route,
     fetchedAt,
@@ -63,8 +62,8 @@ function unavailableSnapshot(route: FlightRoute, fetchedAt: string, window: Fare
   };
 }
 
-async function getFlightSnapshot(
-  route: FlightRoute,
+export async function getFlightSnapshot(
+  route: FlightSearchRoute,
   apiKey: string,
   window: FareWindow,
   fetchedAt: string,
@@ -91,6 +90,7 @@ async function getFlightSnapshot(
       departureDate: window.departureDate,
       returnDate: window.returnDate,
       stops: cheapest.stops,
+      ...(cheapest.durationMinutes !== undefined ? { durationMinutes: cheapest.durationMinutes } : {}),
       status: "available",
     };
   } catch (error) {
@@ -103,15 +103,11 @@ export async function getFlightDashboard(): Promise<FlightSnapshot[]> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   const fetchedAt = new Date().toISOString();
 
-  if (!apiKey) return flightRoutes.map((route) => {
-    const [window] = route.destination === "SJC" ? schoolBreaks : [fareSearchWindow];
-    return unavailableSnapshot(route, fetchedAt, window);
-  });
+  if (!apiKey) return flightRoutes.map((route) => unavailableSnapshot(route, fetchedAt, schoolBreaks[0]));
 
   return Promise.all(flightRoutes.map(async (route) => {
-    const windows = route.destination === "SJC" ? schoolBreaks : [fareSearchWindow];
     const snapshots = await Promise.all(
-      windows.map((window) => getFlightSnapshot(route, apiKey, window, fetchedAt)),
+      schoolBreaks.map((window) => getFlightSnapshot(route, apiKey, window, fetchedAt)),
     );
     return snapshots
       .filter((snapshot) => snapshot.status === "available")
