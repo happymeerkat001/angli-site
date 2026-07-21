@@ -2,7 +2,8 @@ export type NewsSourceId =
   | "dallas-news"
   | "crosscheck"
   | "google-news"
-  | "hoopshype";
+  | "hoopshype"
+  | "stock-news";
 
 export type NewsSource = {
   id: NewsSourceId;
@@ -17,6 +18,22 @@ export type NewsItem = {
   publisher: string;
   publishedAt: string | null;
   sourceId: NewsSourceId;
+};
+
+export type StockPosition = {
+  symbol: "NVDA";
+  shares: number;
+  costBasisPerShare: number;
+};
+
+export type StockSnapshot = {
+  symbol: string;
+  price: number;
+  previousClose: number;
+  dayChange: number;
+  dayChangePercent: number;
+  positionValue: number;
+  unrealizedPL: number;
 };
 
 export type FlightRoute = {

@@ -1,4 +1,4 @@
-import type { CaliforniaAirport, FareWindow, FlightRoute, NewsSource } from "./types";
+import type { CaliforniaAirport, FareWindow, FlightRoute, NewsSource, StockPosition } from "./types";
 
 const googleNewsBaseUrl = "https://news.google.com/rss";
 
@@ -22,6 +22,18 @@ export const newsSources: NewsSource[] = [
   { id: "google-news", label: "Google News", feedUrl: googleNewsSearch() },
   { id: "hoopshype", label: "HoopsHype", feedUrl: googleNewsSearch("site:hoopshype.com") },
 ];
+
+export const stockNewsSource: NewsSource = {
+  id: "stock-news",
+  label: "Google News",
+  feedUrl: googleNewsSearch("NVIDIA NVDA stock"),
+};
+
+export const stockPosition: StockPosition = {
+  symbol: "NVDA",
+  shares: 203.26,
+  costBasisPerShare: 245.99,
+};
 
 export const flightRoutes: FlightRoute[] = [
   { origin: "DFW", destination: "CRK", label: "Clark, Philippines" },

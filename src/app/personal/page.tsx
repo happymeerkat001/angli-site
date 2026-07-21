@@ -1,8 +1,11 @@
-import { CalendarDays, MapPin, Newspaper, Plane } from "lucide-react";
+import { CalendarDays, MapPin, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { getAnywhereDashboard } from "@/lib/dashboard/flights-anywhere";
 import { getFlightDashboard } from "@/lib/dashboard/flights";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
+import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
+import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
+import { MonthGrid } from "@/components/MonthGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +23,17 @@ function durationLabel(durationMinutes: number) {
 const googleFlightsUrl = "https://www.google.com/travel/flights";
 
 export default async function PersonalPage() {
-  const [agenda, anywhere, flights, news] = await Promise.all([
+  const [agenda, anywhere, flights, news, stock, stockHeadlines] = await Promise.all([
     getCalendarAgenda(),
     getAnywhereDashboard(),
     getFlightDashboard(),
     getNewsDashboard(),
+    getStockSnapshot(),
+    getStockHeadlines(),
   ]);
+  const stockAnalysis = stock.status === "ok"
+    ? await getStockAnalysis(stock.value, stockHeadlines.status === "ok" ? stockHeadlines.value : [])
+    : null;
   const headlines = mixNewsItems(
     Object.values(news).flatMap((result) => result.status === "ok" ? result.value : []),
   );
@@ -58,6 +66,30 @@ export default async function PersonalPage() {
               ))}
             </ul>
           ) : <p className="text-sm text-muted">News temporarily unavailable.</p>}
+        </section>
+      </section>
+
+      <section aria-labelledby="stock-heading">
+        <div className="mb-6 flex items-center gap-3">
+          <TrendingUp className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Position overview</p>
+            <h2 id="stock-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">NVIDIA (NVDA)</h2>
+          </div>
+        </div>
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {stock.status === "ok" ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div><p className="text-sm text-muted">Live price</p><p className="mt-1 font-serif text-3xl font-semibold text-ink">${stock.value.price.toLocaleString()}</p><p className={`mt-1 text-sm ${stock.value.dayChange >= 0 ? "text-emerald-700" : "text-red-700"}`}>{stock.value.dayChange >= 0 ? "+" : ""}{stock.value.dayChange.toFixed(2)} ({stock.value.dayChangePercent.toFixed(2)}%)</p></div>
+              <div><p className="text-sm text-muted">Position value</p><p className="mt-1 font-serif text-3xl font-semibold text-ink">${stock.value.positionValue.toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted">Unrealized P/L</p><p className={`mt-1 font-serif text-3xl font-semibold ${stock.value.unrealizedPL >= 0 ? "text-emerald-700" : "text-red-700"}`}>{stock.value.unrealizedPL >= 0 ? "+" : "−"}${Math.abs(stock.value.unrealizedPL).toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted">Suggested limit sell</p><p className="mt-1 font-serif text-3xl font-semibold text-ink">{stockAnalysis?.status === "ok" ? `$${stockAnalysis.value.limitSellPrice.toLocaleString()}` : "Unavailable"}</p></div>
+            </div>
+          ) : <p className="text-sm text-muted">{stock.message}.</p>}
+          {stockAnalysis?.status === "ok" ? <p className="mt-6 text-sm leading-6 text-muted">{stockAnalysis.value.analysis}<span className="mt-2 block text-xs">AI-generated analysis — not financial advice.</span></p> : <p className="mt-6 text-sm text-muted">Analysis unavailable.</p>}
+          {stockHeadlines.status === "ok" ? (
+            <ul className="mt-6 grid gap-x-8 divide-y divide-line md:grid-cols-2 md:divide-y-0">{stockHeadlines.value.map((item) => <li key={item.id} className="py-3"><a href={item.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-ink hover:text-accent">{item.title}<span className="mt-1 block text-xs font-normal text-muted">{item.publisher}</span></a></li>)}</ul>
+          ) : <p className="mt-6 text-sm text-muted">Stock news unavailable.</p>}
         </section>
       </section>
 
@@ -135,8 +167,9 @@ export default async function PersonalPage() {
           <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 30 days</h2>
         </div>
         {agenda.status === "ok" ? (
-          agenda.value.length > 0 ? (
-            <ul className="mt-6 divide-y divide-line">
+          <>
+            <MonthGrid events={agenda.value} />
+            {agenda.value.length > 0 ? <ul className="mt-6 divide-y divide-line">
               {agenda.value.map((event) => (
                 <li key={`${event.start}-${event.title}`} className="py-4 first:pt-0">
                   <p className="font-semibold text-ink">{event.title}</p>
@@ -144,8 +177,8 @@ export default async function PersonalPage() {
                   {event.location ? <p className="mt-1 inline-flex items-center gap-1 text-sm text-muted"><MapPin size={14} aria-hidden="true" />{event.location}</p> : null}
                 </li>
               ))}
-            </ul>
-          ) : <p className="mt-6 text-muted">Nothing scheduled in the next 30 days.</p>
+            </ul> : <p className="mt-6 text-muted">Nothing scheduled in the next 30 days.</p>}
+          </>
         ) : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
       </section>
     </div>
