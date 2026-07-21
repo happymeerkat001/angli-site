@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { flightRoutes, schoolBreaks } from "./config";
+import { fareSearch, flightRoutes, schoolBreaks } from "./config";
 import { getFlightDashboard, selectLowestEligibleFlight, serpApiFlightsUrl } from "./flights";
 
 const originalSerpApiKey = process.env.SERP_API_KEY;
@@ -33,7 +33,7 @@ test("requests the configured 2027 round-trip search dates", () => {
   expect(url.searchParams.get("arrival_id")).toBe("CRK");
 });
 
-test("searches every fare-grid route across all school breaks", async () => {
+test("searches every fare-grid route in the fixed Summer 2027 window", async () => {
   process.env.SERP_API_KEY = "test-key";
   const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async () => new Response(JSON.stringify({
     best_flights: [{ price: 500, flights: [{}] }],
@@ -43,7 +43,9 @@ test("searches every fare-grid route across all school breaks", async () => {
 
   expect(flights).toHaveLength(3);
   expect(flights.every((flight) => flight.status === "available")).toBe(true);
-  expect(fetchMock).toHaveBeenCalledTimes(flightRoutes.length * schoolBreaks.length);
+  expect(fetchMock).toHaveBeenCalledTimes(flightRoutes.length);
   expect(fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get("outbound_date")))
-    .toEqual(flightRoutes.flatMap(() => schoolBreaks.map((window) => window.departureDate)));
+    .toEqual(flightRoutes.map(() => fareSearch.departureDate));
+  expect(fetchMock.mock.calls.map(([url]) => new URL(url.toString()).searchParams.get("return_date")))
+    .toEqual(flightRoutes.map(() => fareSearch.returnDate));
 });

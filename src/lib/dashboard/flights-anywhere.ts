@@ -1,6 +1,6 @@
 import { californiaAirports, schoolBreaks } from "./config";
 import { getFlightSnapshot } from "./flights";
-import type { AnywhereFlightOption, FareWindow, FlightSnapshot, SourceResult } from "./types";
+import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
 type SerpExploreDestination = {
   name?: unknown;
@@ -97,9 +97,16 @@ export function selectLowestCaliforniaFare(candidates: CaliforniaFareCandidate[]
   return eligible.sort((a, b) => a.amount - b.amount)[0] ?? null;
 }
 
-export async function getCaliforniaFare(): Promise<AnywhereFlightOption | null> {
+export function selectCaliforniaFaresByWindow(candidates: CaliforniaFareCandidate[]) {
+  return Object.fromEntries(schoolBreaks.flatMap((window) => {
+    const fare = selectLowestCaliforniaFare(candidates.filter(({ windowLabel }) => windowLabel === window.label));
+    return fare ? [[window.label, fare]] : [];
+  })) as Record<string, AnywhereFlightOption>;
+}
+
+async function getCaliforniaFaresByWindow(): Promise<Record<string, AnywhereFlightOption>> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) return {};
 
   const fetchedAt = new Date().toISOString();
   const candidates = await Promise.all(californiaAirports.flatMap((airport) => (
@@ -109,10 +116,10 @@ export async function getCaliforniaFare(): Promise<AnywhereFlightOption | null> 
     }))
   )));
 
-  return selectLowestCaliforniaFare(candidates);
+  return selectCaliforniaFaresByWindow(candidates);
 }
 
-export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereFlightOption[]>> {
+export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindowSection[]>> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
 
@@ -125,10 +132,10 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereFligh
       if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
 
       const data = await response.json() as SerpExploreResponse;
-      return { failed: false, options: selectTopAnywhereFlights(data.destinations ?? [], window.label) };
+      return { window, failed: false, options: selectTopAnywhereFlights(data.destinations ?? [], window.label) };
     } catch (error) {
       console.error(`Flight explore unavailable for ${window.label}`, error);
-      return { failed: true, options: [] as AnywhereFlightOption[] };
+      return { window, failed: true, options: [] as AnywhereFlightOption[] };
     }
   }));
 
@@ -136,14 +143,13 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereFligh
     return { status: "error", message: "Flight search temporarily unavailable" };
   }
 
-  const californiaFare = await getCaliforniaFare();
-  const topExploreFlights = results
-    .flatMap((result) => result.options)
-    .sort((a, b) => a.amount - b.amount)
-    .slice(0, 4);
+  const californiaFares = await getCaliforniaFaresByWindow();
 
   return {
     status: "ok",
-    value: californiaFare ? [...topExploreFlights, californiaFare] : topExploreFlights,
+    value: results.map(({ window, options }) => ({
+      windowLabel: window.label,
+      options: californiaFares[window.label] ? [...options, californiaFares[window.label]] : options,
+    })),
   };
 }

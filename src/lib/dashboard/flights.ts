@@ -1,4 +1,4 @@
-import { fareSearch, flightRoutes, schoolBreaks } from "./config";
+import { fareSearch, flightRoutes } from "./config";
 import type { FareWindow, FlightSearchRoute, FlightSnapshot } from "./types";
 
 type SerpFlightOption = {
@@ -16,6 +16,12 @@ type EligibleFlight = {
   amount: number;
   stops: number;
   durationMinutes?: number;
+};
+
+const fareSearchWindow: FareWindow = {
+  label: "Summer 2027",
+  departureDate: fareSearch.departureDate,
+  returnDate: fareSearch.returnDate,
 };
 
 export function serpApiFlightsUrl(route: FlightSearchRoute, apiKey: string, window: FareWindow) {
@@ -103,15 +109,7 @@ export async function getFlightDashboard(): Promise<FlightSnapshot[]> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   const fetchedAt = new Date().toISOString();
 
-  if (!apiKey) return flightRoutes.map((route) => unavailableSnapshot(route, fetchedAt, schoolBreaks[0]));
+  if (!apiKey) return flightRoutes.map((route) => unavailableSnapshot(route, fetchedAt, fareSearchWindow));
 
-  return Promise.all(flightRoutes.map(async (route) => {
-    const snapshots = await Promise.all(
-      schoolBreaks.map((window) => getFlightSnapshot(route, apiKey, window, fetchedAt)),
-    );
-    return snapshots
-      .filter((snapshot) => snapshot.status === "available")
-      .sort((a, b) => (a.amount ?? Infinity) - (b.amount ?? Infinity))[0]
-      ?? snapshots[0];
-  }));
+  return Promise.all(flightRoutes.map((route) => getFlightSnapshot(route, apiKey, fareSearchWindow, fetchedAt)));
 }

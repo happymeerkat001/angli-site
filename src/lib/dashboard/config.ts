@@ -45,6 +45,8 @@ export const californiaAirports: CaliforniaAirport[] = [
 ];
 
 export const fareSearch = {
+  departureDate: "2027-06-18",
+  returnDate: "2027-07-09",
   adults: 1,
   cabin: "ECONOMY",
 } as const;

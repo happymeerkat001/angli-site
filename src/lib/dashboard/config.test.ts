@@ -28,6 +28,11 @@ test("configures California airport searches from DFW", () => {
   ]);
 });
 
-test("retains the configured passenger and cabin search options", () => {
-  expect(fareSearch).toEqual({ adults: 1, cabin: "ECONOMY" });
+test("configures the fixed Summer 2027 fare search", () => {
+  expect(fareSearch).toEqual({
+    departureDate: "2027-06-18",
+    returnDate: "2027-07-09",
+    adults: 1,
+    cabin: "ECONOMY",
+  });
 });
