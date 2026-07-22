@@ -77,7 +77,7 @@ export async function getFlightSnapshot(
 ): Promise<FlightSnapshot> {
   try {
     const response = await fetch(serpApiFlightsUrl(route, apiKey, window), {
-      next: { revalidate: 604_800 },
+      next: { revalidate: false, tags: ["flights"] },
       signal: AbortSignal.timeout(15_000),
     });
     if (!response.ok) throw new Error(`Flight response: ${response.status}`);

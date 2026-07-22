@@ -130,7 +130,7 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindo
   const results = await Promise.all(windows.map(async (window) => {
     try {
       const responses = await Promise.all(buildFlexCandidates(window).map(async (candidate) => {
-        const response = await fetch(serpApiExploreUrl(candidate, apiKey), { next: { revalidate: 604_800 }, signal: AbortSignal.timeout(15_000) });
+        const response = await fetch(serpApiExploreUrl(candidate, apiKey), { next: { revalidate: false, tags: ["flights"] }, signal: AbortSignal.timeout(15_000) });
         if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
         return (await response.json() as SerpExploreResponse).destinations ?? [];
       }));

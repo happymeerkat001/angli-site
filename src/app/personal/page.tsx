@@ -6,6 +6,7 @@ import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
 import { WeekGrid } from "@/components/WeekGrid";
+import { refreshFlights } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,8 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="fares-heading">
+        <form action={refreshFlights} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh flights</button></form>
+        <p className="mb-4 text-sm text-muted">Last refreshed: {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(Math.max(...flights.map(({ fetchedAt }) => new Date(fetchedAt).getTime()))))}</p>
         <p className="mb-4 text-sm text-muted">
           Prices below can be stale.{" "}
           <a href={googleFlightsUrl} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
