@@ -1,5 +1,6 @@
 import { californiaAirports, schoolBreaks } from "./config";
-import { getFlightSnapshot } from "./flights";
+import { buildFlexCandidates, windowsInBookingRange } from "./flex-dates";
+import { getFlexFlightSnapshot } from "./flights";
 import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
 type SerpExploreDestination = {
@@ -36,7 +37,7 @@ export function selectTopAnywhereFlights(
   maxDurationMinutes = 360,
   limit = 4,
 ): AnywhereFlightOption[] {
-  return destinations
+  const options = destinations
     .flatMap((destination) => {
       const amount = typeof destination.flight_price === "number" ? destination.flight_price : null;
       const durationMinutes = typeof destination.flight_duration === "number" ? destination.flight_duration : null;
@@ -65,8 +66,9 @@ export function selectTopAnywhereFlights(
         windowLabel,
       }];
     })
-    .sort((a, b) => a.amount - b.amount)
-    .slice(0, limit);
+    .sort((a, b) => a.amount - b.amount);
+  const seen = new Set<string>();
+  return options.filter((option) => !seen.has(option.airportCode) && Boolean(seen.add(option.airportCode))).slice(0, limit);
 }
 
 type CaliforniaFareCandidate = {
@@ -104,14 +106,14 @@ export function selectCaliforniaFaresByWindow(candidates: CaliforniaFareCandidat
   })) as Record<string, AnywhereFlightOption>;
 }
 
-async function getCaliforniaFaresByWindow(): Promise<Record<string, AnywhereFlightOption>> {
+async function getCaliforniaFaresByWindow(windows: FareWindow[]): Promise<Record<string, AnywhereFlightOption>> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return {};
 
   const fetchedAt = new Date().toISOString();
   const candidates = await Promise.all(californiaAirports.flatMap((airport) => (
-    schoolBreaks.map(async (window) => ({
-      snapshot: await getFlightSnapshot(airport, apiKey, window, fetchedAt),
+    windows.map(async (window) => ({
+      snapshot: await getFlexFlightSnapshot(airport, apiKey, window, fetchedAt),
       windowLabel: window.label,
     }))
   )));
@@ -123,16 +125,16 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindo
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
 
-  const results = await Promise.all(schoolBreaks.map(async (window) => {
+  const windows = windowsInBookingRange(new Date(), schoolBreaks);
+  if (windows.length === 0) return { status: "ok", value: [] };
+  const results = await Promise.all(windows.map(async (window) => {
     try {
-      const response = await fetch(serpApiExploreUrl(window, apiKey), {
-        next: { revalidate: 86_400 },
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
-
-      const data = await response.json() as SerpExploreResponse;
-      return { window, failed: false, options: selectTopAnywhereFlights(data.destinations ?? [], window.label) };
+      const responses = await Promise.all(buildFlexCandidates(window).map(async (candidate) => {
+        const response = await fetch(serpApiExploreUrl(candidate, apiKey), { next: { revalidate: 86_400 }, signal: AbortSignal.timeout(15_000) });
+        if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
+        return (await response.json() as SerpExploreResponse).destinations ?? [];
+      }));
+      return { window, failed: false, options: selectTopAnywhereFlights(responses.flat(), window.label) };
     } catch (error) {
       console.error(`Flight explore unavailable for ${window.label}`, error);
       return { window, failed: true, options: [] as AnywhereFlightOption[] };
@@ -143,12 +145,14 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindo
     return { status: "error", message: "Flight search temporarily unavailable" };
   }
 
-  const californiaFares = await getCaliforniaFaresByWindow();
+  const californiaFares = await getCaliforniaFaresByWindow(windows);
 
   return {
     status: "ok",
     value: results.map(({ window, options }) => ({
       windowLabel: window.label,
+      departureDate: window.departureDate,
+      returnDate: window.returnDate,
       options: californiaFares[window.label] ? [...options, californiaFares[window.label]] : options,
     })),
   };

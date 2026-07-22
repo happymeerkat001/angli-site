@@ -1,11 +1,11 @@
-import { CalendarDays, MapPin, Newspaper, Plane, TrendingUp } from "lucide-react";
+import { CalendarDays, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { getAnywhereDashboard } from "@/lib/dashboard/flights-anywhere";
 import { getFlightDashboard } from "@/lib/dashboard/flights";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
-import { MonthGrid } from "@/components/MonthGrid";
+import { WeekGrid } from "@/components/WeekGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +116,7 @@ export default async function PersonalPage() {
               {flight.status === "available" ? (
                 <>
                   <p className="mt-5 font-serif text-4xl font-semibold text-ink">${flight.amount?.toLocaleString()}</p>
-                  <p className="mt-2 text-sm text-muted">Cheapest {flight.stops === 0 ? "nonstop" : "one-stop"} fare</p>
+                  <p className="mt-2 text-sm text-muted">Cheapest {flight.stops === 0 ? "nonstop" : "one-stop"} fare, round trip</p>
                   <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
                 </>
               ) : <p className="mt-5 text-sm text-muted">Live price unavailable today.</p>}
@@ -139,16 +139,16 @@ export default async function PersonalPage() {
               <div className="space-y-8">
                 {anywhere.value.map((group) => (
                   <section key={group.windowLabel}>
-                    <h3 className="font-serif text-2xl font-semibold text-ink">Cheapest flights anywhere (≤6h) — {group.windowLabel}</h3>
+                    <h3 className="font-serif text-2xl font-semibold text-ink">Cheapest flights anywhere (≤6h) — {group.windowLabel}: {group.departureDate} – {group.returnDate}</h3>
                     {group.options.length > 0 ? (
                       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         {group.options.map((flight) => (
                           <section key={`${flight.airportCode}-${flight.departureDate}-${flight.returnDate}`} className="rounded-[1.5rem] border border-line p-5">
                             <p className="text-sm font-semibold text-accent">{flight.airportCode}</p>
                             <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
-                            <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()}</p>
-                            <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} one way · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
-                            <p className="mt-2 text-sm text-muted">{flight.windowLabel}: {flight.departureDate} – {flight.returnDate}</p>
+                            <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
+                            <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
+                            <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
                           </section>
                         ))}
                       </div>
@@ -164,21 +164,10 @@ export default async function PersonalPage() {
       <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="calendar-heading">
         <div className="flex items-center gap-3">
           <CalendarDays className="text-accent" aria-hidden="true" />
-          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 30 days</h2>
+          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 7 Days</h2>
         </div>
         {agenda.status === "ok" ? (
-          <>
-            <MonthGrid events={agenda.value} />
-            {agenda.value.length > 0 ? <ul className="mt-6 divide-y divide-line">
-              {agenda.value.map((event) => (
-                <li key={`${event.start}-${event.title}`} className="py-4 first:pt-0">
-                  <p className="font-semibold text-ink">{event.title}</p>
-                  <p className="mt-1 text-sm text-muted">{event.isAllDay ? event.start : new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(event.start))}</p>
-                  {event.location ? <p className="mt-1 inline-flex items-center gap-1 text-sm text-muted"><MapPin size={14} aria-hidden="true" />{event.location}</p> : null}
-                </li>
-              ))}
-            </ul> : <p className="mt-6 text-muted">Nothing scheduled in the next 30 days.</p>}
-          </>
+          <WeekGrid events={agenda.value} />
         ) : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
       </section>
     </div>

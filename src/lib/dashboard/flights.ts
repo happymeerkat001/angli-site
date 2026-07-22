@@ -1,4 +1,5 @@
 import { fareSearch, flightRoutes } from "./config";
+import { buildFlexCandidates } from "./flex-dates";
 import type { FareWindow, FlightSearchRoute, FlightSnapshot } from "./types";
 
 type SerpFlightOption = {
@@ -105,11 +106,25 @@ export async function getFlightSnapshot(
   }
 }
 
+export async function getFlexFlightSnapshot(
+  route: FlightSearchRoute,
+  apiKey: string,
+  window: FareWindow,
+  fetchedAt: string,
+): Promise<FlightSnapshot> {
+  const snapshots = await Promise.all(buildFlexCandidates(window).map((candidate) => (
+    getFlightSnapshot(route, apiKey, candidate, fetchedAt)
+  )));
+  return snapshots
+    .filter((snapshot): snapshot is FlightSnapshot & { amount: number; status: "available" } => snapshot.status === "available" && snapshot.amount !== null)
+    .sort((a, b) => a.amount - b.amount)[0] ?? unavailableSnapshot(route, fetchedAt, window);
+}
+
 export async function getFlightDashboard(): Promise<FlightSnapshot[]> {
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   const fetchedAt = new Date().toISOString();
 
   if (!apiKey) return flightRoutes.map((route) => unavailableSnapshot(route, fetchedAt, fareSearchWindow));
 
-  return Promise.all(flightRoutes.map((route) => getFlightSnapshot(route, apiKey, fareSearchWindow, fetchedAt)));
+  return Promise.all(flightRoutes.map((route) => getFlexFlightSnapshot(route, apiKey, fareSearchWindow, fetchedAt)));
 }

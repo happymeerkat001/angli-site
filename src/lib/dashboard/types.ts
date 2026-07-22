@@ -99,5 +99,7 @@ export type AnywhereFlightOption = {
 
 export type AnywhereWindowSection = {
   windowLabel: string;
+  departureDate: string;
+  returnDate: string;
   options: AnywhereFlightOption[];
 };

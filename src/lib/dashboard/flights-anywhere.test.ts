@@ -1,5 +1,6 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { schoolBreaks } from "./config";
+import { buildFlexCandidates } from "./flex-dates";
 import type { FlightSnapshot } from "./types";
 import { getAnywhereDashboard, serpApiExploreUrl, selectCaliforniaFaresByWindow, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
 
@@ -102,7 +103,7 @@ test("groups each break's explore results with its California fifth slot", async
 
     const airportCode = url.searchParams.get("arrival_id");
     return new Response(JSON.stringify({ best_flights: [{
-      price: airportCode === "SFO" ? 100 : 200,
+      price: airportCode === "SFO" ? (outboundDate === "2027-06-23" ? 100 : 150) : 200,
       flights: [{}],
       total_duration: 180,
     }] }), { status: 200 });
@@ -112,8 +113,9 @@ test("groups each break's explore results with its California fifth slot", async
 
   expect(result.status).toBe("ok");
   if (result.status !== "ok") throw new Error(result.message);
-  expect(result.value.map(({ windowLabel }) => windowLabel)).toEqual(schoolBreaks.map(({ label }) => label));
+  expect(result.value.map(({ windowLabel }) => windowLabel)).toEqual(["Fall Break"]);
+  expect(result.value[0]).toMatchObject({ departureDate: "2026-10-10", returnDate: "2026-10-13" });
   expect(result.value.every(({ options }) => options.length === 2)).toBe(true);
   expect(result.value.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
-  expect(fetchMock).toHaveBeenCalledTimes(schoolBreaks.length * 4);
+  expect(fetchMock).toHaveBeenCalledTimes(1 + 3 * buildFlexCandidates(schoolBreaks[0]).length);
 });
