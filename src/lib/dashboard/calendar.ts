@@ -46,7 +46,7 @@ function configuredCalendarIds() {
 export async function getCalendarAgenda(): Promise<SourceResult<CalendarEvent[]>> {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
-  const refreshToken = process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+  const refreshToken = process.env.GOOGLE_REFRESH_TOKEN;
   if (!clientId || !clientSecret || !refreshToken) return { status: "error", message: "Calendar is not connected" };
 
   try {

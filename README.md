@@ -54,14 +54,14 @@ Vercel environment variables:
 - `DASHBOARD_PASSWORD`
 - `GOOGLE_CALENDAR_CLIENT_ID`
 - `GOOGLE_CALENDAR_CLIENT_SECRET`
-- `GOOGLE_CALENDAR_REFRESH_TOKEN`
+- `GOOGLE_REFRESH_TOKEN`
 - `GOOGLE_CALENDAR_IDS` (optional comma-separated override; otherwise all selected calendars are read)
 - `SERP_API_KEY` (SerpApi key for live Google Flights fares; without it every
   route falls back to "Live price unavailable today")
 - `STOCK_LLM_BASE_URL`, `STOCK_LLM_API_KEY`, `STOCK_LLM_MODEL` (optional OpenAI-compatible endpoint for the daily NVDA analysis)
 
 Create a Google Cloud OAuth client with only the read-only Calendar scope, then
-store its refresh token as `GOOGLE_CALENDAR_REFRESH_TOKEN`. Do not use a
+store its refresh token as `GOOGLE_REFRESH_TOKEN`. Do not use a
 `NEXT_PUBLIC_` prefix for any calendar variable. Events that exist only in
 Apple Calendar/iCloud must be shared or subscribed into Google Calendar before
 they can appear in the dashboard. `/personal` uses its own dashboard credentials;
