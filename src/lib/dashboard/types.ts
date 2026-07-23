@@ -103,3 +103,9 @@ export type AnywhereWindowSection = {
   returnDate: string;
   options: AnywhereFlightOption[];
 };
+
+export type InsightEntry = {
+  id: string;
+  noteTitle: string;
+  insightText: string;
+};

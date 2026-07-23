@@ -1,0 +1,12 @@
+[
+  {
+    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-1",
+    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
+    "insightText": "He predicts that human work shifts upward from writing each line toward requirements, architecture, risk control, evaluation, and improving the agent environment."
+  },
+  {
+    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-2",
+    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
+    "insightText": "The durable idea is to build a learning-and-verification loop, not a dependency on a fashionable AI coding tool. AI can amplify output, but unexamined output amplifies failure too. The valuable operator identifies the highest-leverage problem, delegates with clear guardrails, measures the result, and codifies what was learned so the next cycle is safer and faster."
+  }
+]

@@ -1,4 +1,4 @@
-import { CalendarDays, Newspaper, Plane, TrendingUp } from "lucide-react";
+import { CalendarDays, Lightbulb, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { getAnywhereDashboard } from "@/lib/dashboard/flights-anywhere";
 import { getFlightDashboard } from "@/lib/dashboard/flights";
@@ -9,6 +9,8 @@ import { fareSearch } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
+import { RandomInsightCard } from "@/components/RandomInsightCard";
+import insights from "@/lib/dashboard/insights.generated.json";
 import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -58,6 +60,11 @@ export default async function PersonalPage() {
           <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 7 Days</h2>
         </div>
         {agenda.status === "ok" ? <WeekGrid events={agenda.value} /> : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
+      </section>
+
+      <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="insight-heading">
+        <div className="mb-4 flex items-center gap-3"><Lightbulb className="text-accent" aria-hidden="true" /><h2 id="insight-heading" className="font-serif text-2xl font-semibold text-ink">Insight reminder</h2></div>
+        <RandomInsightCard insights={insights} />
       </section>
 
       <section aria-labelledby="news-heading">
