@@ -51,6 +51,14 @@ export default async function PersonalPage() {
         <h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-ink">Personal dashboard</h1>
       </section>
 
+      <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="calendar-heading">
+        <div className="flex items-center gap-3">
+          <CalendarDays className="text-accent" aria-hidden="true" />
+          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 7 Days</h2>
+        </div>
+        {agenda.status === "ok" ? <WeekGrid events={agenda.value} /> : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
+      </section>
+
       <section aria-labelledby="news-heading">
         <form action={refreshNews} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh headlines</button></form>
         <div className="mb-6 flex items-center gap-3">
@@ -173,15 +181,7 @@ export default async function PersonalPage() {
         </section>
       </section>
 
-      <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="calendar-heading">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="text-accent" aria-hidden="true" />
-          <h2 id="calendar-heading" className="font-serif text-2xl font-semibold text-ink">Next 7 Days</h2>
-        </div>
-        {agenda.status === "ok" ? (
-          <WeekGrid events={agenda.value} />
-        ) : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
-      </section>
+
     </div>
   );
 }
