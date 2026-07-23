@@ -5,6 +5,8 @@ import { getFlightDashboard } from "@/lib/dashboard/flights";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
+import { fareSearch } from "@/lib/dashboard/config";
+import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { refreshFlights, refreshStockAnalysis } from "./actions";
 
@@ -24,6 +26,9 @@ function durationLabel(durationMinutes: number) {
 const googleFlightsUrl = "https://www.google.com/travel/flights";
 
 export default async function PersonalPage() {
+  const now = new Date();
+  const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
+  const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
   const [agenda, anywhere, flights, news, stock, stockHeadlines] = await Promise.all([
     getCalendarAgenda(),
     getAnywhereDashboard(),
@@ -110,7 +115,8 @@ export default async function PersonalPage() {
           <Plane className="text-accent" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
-            <h2 id="fares-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Summer Fares</h2>
+            <h2 id="fares-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">International Summer Fares</h2>
+            <p className={summerInWindow ? "text-red-700" : "text-muted"}>(International {summerStartLooking})</p>
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -144,7 +150,7 @@ export default async function PersonalPage() {
               <div className="space-y-8">
                 {anywhere.value.map((group) => (
                   <section key={group.windowLabel}>
-                    <h3 className="font-serif text-2xl font-semibold text-ink">Cheapest flights anywhere (≤6h) — {group.windowLabel}: {group.departureDate} – {group.returnDate}</h3>
+                    <h3 className={`font-serif text-2xl font-semibold ${group.windowLabel === "Summer Break" && isWithinLookaheadWindow(now, group.departureDate, 4) ? "text-red-700" : "text-ink"}`}>{group.windowLabel === "Summer Break" ? "Domestic Summer Break" : group.windowLabel}: {group.departureDate} – {group.returnDate} (start looking {subtractMonths(group.departureDate, 4)})</h3>
                     {group.options.length > 0 ? (
                       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         {group.options.map((flight) => (

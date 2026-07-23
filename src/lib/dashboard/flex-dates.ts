@@ -19,3 +19,14 @@ export function windowsInBookingRange(now: Date, windows: FareWindow[]): FareWin
   const cutoff = cutoffDate.toISOString().slice(0, 10);
   return windows.filter(({ departureDate }) => departureDate > today && departureDate < cutoff);
 }
+
+export function subtractMonths(dateString: string, months: number) {
+  const date = new Date(`${dateString}T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() - months);
+  return date.toISOString().slice(0, 10);
+}
+
+export function isWithinLookaheadWindow(now: Date, departureDate: string, months: number) {
+  const today = now.toISOString().slice(0, 10);
+  return today >= subtractMonths(departureDate, months) && today < departureDate;
+}
