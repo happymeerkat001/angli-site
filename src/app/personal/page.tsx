@@ -6,7 +6,7 @@ import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
 import { WeekGrid } from "@/components/WeekGrid";
-import { refreshFlights } from "./actions";
+import { refreshFlights, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,7 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="stock-heading">
+        <form action={refreshStockAnalysis} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh analysis</button></form>
         <div className="mb-6 flex items-center gap-3">
           <TrendingUp className="text-accent" aria-hidden="true" />
           <div>
@@ -88,6 +89,7 @@ export default async function PersonalPage() {
             </div>
           ) : <p className="text-sm text-muted">{stock.message}.</p>}
           {stockAnalysis?.status === "ok" ? <p className="mt-6 text-sm leading-6 text-muted">{stockAnalysis.value.analysis}<span className="mt-2 block text-xs">AI-generated analysis — not financial advice.</span></p> : <p className="mt-6 text-sm text-muted">Analysis unavailable.</p>}
+          {stockAnalysis?.status === "ok" ? <p className="mt-2 text-xs text-muted">Last refreshed: {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(stockAnalysis.value.fetchedAt))}</p> : null}
           {stockHeadlines.status === "ok" ? (
             <ul className="mt-6 grid gap-x-8 divide-y divide-line md:grid-cols-2 md:divide-y-0">{stockHeadlines.value.map((item) => <li key={item.id} className="py-3"><a href={item.url} target="_blank" rel="noreferrer" className="text-sm font-medium text-ink hover:text-accent">{item.title}<span className="mt-1 block text-xs font-normal text-muted">{item.publisher}</span></a></li>)}</ul>
           ) : <p className="mt-6 text-sm text-muted">Stock news unavailable.</p>}

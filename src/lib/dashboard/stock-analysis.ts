@@ -4,6 +4,7 @@ import type { NewsItem, SourceResult, StockSnapshot } from "./types";
 export type StockAnalysis = {
   analysis: string;
   limitSellPrice: number;
+  fetchedAt: string;
 };
 
 type ChatResponse = {
@@ -35,7 +36,7 @@ function jsonObjectCandidates(content: string) {
   return candidates;
 }
 
-export function parseStockAnalysis(content: unknown): StockAnalysis | null {
+export function parseStockAnalysis(content: unknown): Omit<StockAnalysis, "fetchedAt"> | null {
   if (typeof content !== "string") return null;
   for (const candidate of jsonObjectCandidates(content)) {
     try {
@@ -62,14 +63,14 @@ export async function getStockAnalysis(snapshot: StockSnapshot, headlines: NewsI
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model, messages: [{ role: "system", content: "You provide concise market commentary, not financial advice." }, { role: "user", content: prompt }], temperature: 0.2 }),
-      next: { revalidate: 86_400 },
+      next: { revalidate: false, tags: ["stock-analysis"] },
       signal: AbortSignal.timeout(30_000),
     });
     if (!response.ok) throw new Error(`Stock analysis response: ${response.status}`);
     const content = (await response.json() as ChatResponse).choices?.[0]?.message?.content;
     const analysis = parseStockAnalysis(content);
     if (!analysis) throw new Error("Stock analysis response is malformed");
-    return { status: "ok", value: analysis };
+    return { status: "ok", value: { ...analysis, fetchedAt: new Date().toISOString() } };
   } catch (error) {
     console.error("NVDA analysis unavailable", error);
     return { status: "error", message: "Analysis temporarily unavailable" };

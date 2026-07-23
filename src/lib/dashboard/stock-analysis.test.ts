@@ -38,7 +38,7 @@ test("sends price, cost basis, and headlines to the configured endpoint", async 
     choices: [{ message: { content: "{\"analysis\":\"Hold.\",\"limit_sell\":320}" } }],
   }), { status: 200 }));
 
-  await expect(getStockAnalysis(snapshot, headlines)).resolves.toEqual({ status: "ok", value: { analysis: "Hold.", limitSellPrice: 320 } });
+  await expect(getStockAnalysis(snapshot, headlines)).resolves.toMatchObject({ status: "ok", value: { analysis: "Hold.", limitSellPrice: 320, fetchedAt: expect.any(String) } });
   expect(fetchMock.mock.calls[0][0]).toBe("https://llm.example/v1/chat/completions");
   expect(fetchMock.mock.calls[0][1]?.body).toContain("245.99");
   expect(fetchMock.mock.calls[0][1]?.body).toContain("NVIDIA earnings");
