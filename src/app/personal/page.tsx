@@ -8,6 +8,7 @@ import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
 import { fareSearch } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
+import { RefreshButton } from "@/components/RefreshButton";
 import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="news-heading">
-        <form action={refreshNews} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh headlines</button></form>
+        <form action={refreshNews} className="mb-4"><RefreshButton label="Refresh headlines" /></form>
         <div className="mb-6 flex items-center gap-3">
           <Newspaper className="text-accent" aria-hidden="true" />
           <div>
@@ -85,7 +86,7 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="stock-heading">
-        <form action={refreshStockAnalysis} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh analysis</button></form>
+        <form action={refreshStockAnalysis} className="mb-4"><RefreshButton label="Refresh analysis" /></form>
         <div className="mb-6 flex items-center gap-3">
           <TrendingUp className="text-accent" aria-hidden="true" />
           <div>
@@ -111,7 +112,7 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="fares-heading">
-        <form action={refreshFlights} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh flights</button></form>
+        <form action={refreshFlights} className="mb-4"><RefreshButton label="Refresh flights" /></form>
         <p className="mb-4 text-sm text-muted">Last refreshed: {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(Math.max(...flights.map(({ fetchedAt }) => new Date(fetchedAt).getTime()))))}</p>
         <p className="mb-4 text-sm text-muted">
           Prices below can be stale.{" "}
