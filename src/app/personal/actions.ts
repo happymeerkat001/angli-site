@@ -9,3 +9,7 @@ export async function refreshFlights() {
 export async function refreshStockAnalysis() {
   revalidateTag("stock-analysis");
 }
+
+export async function refreshNews() {
+  revalidateTag("news");
+}

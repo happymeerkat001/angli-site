@@ -19,7 +19,7 @@ test("computes NVDA position value and unrealized profit from Yahoo quote data",
     dayChange: 10,
     dayChangePercent: 10 / 290 * 100,
     positionValue: 60_978,
-    unrealizedPL: 10_978.07,
+    unrealizedPL: 55_520.47,
   });
 });
 

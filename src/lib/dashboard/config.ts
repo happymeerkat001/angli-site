@@ -32,7 +32,7 @@ export const stockNewsSource: NewsSource = {
 export const stockPosition: StockPosition = {
   symbol: "NVDA",
   shares: 203.26,
-  costBasisPerShare: 245.99,
+  costBasisPerShare: 26.85,
 };
 
 export const flightRoutes: FlightRoute[] = [

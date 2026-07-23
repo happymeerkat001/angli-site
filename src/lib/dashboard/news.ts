@@ -74,7 +74,7 @@ export async function getNewsSource(source: NewsSource): Promise<SourceResult<Ne
   try {
     const response = await fetch(source.feedUrl, {
       headers: { Accept: "application/rss+xml, application/xml, text/xml" },
-      next: { revalidate: 3600 },
+      next: { revalidate: false, tags: ["news"] },
       signal: AbortSignal.timeout(10_000),
     });
 

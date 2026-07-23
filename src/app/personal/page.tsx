@@ -8,7 +8,7 @@ import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
 import { fareSearch } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
-import { refreshFlights, refreshStockAnalysis } from "./actions";
+import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +52,7 @@ export default async function PersonalPage() {
       </section>
 
       <section aria-labelledby="news-heading">
+        <form action={refreshNews} className="mb-4"><button type="submit" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white">Refresh headlines</button></form>
         <div className="mb-6 flex items-center gap-3">
           <Newspaper className="text-accent" aria-hidden="true" />
           <div>
