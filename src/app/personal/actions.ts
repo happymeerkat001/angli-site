@@ -1,9 +1,11 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { refreshFlightState } from "@/lib/dashboard/flight-refresh";
 
 export async function refreshFlights() {
-  revalidateTag("flights");
+  await refreshFlightState();
+  revalidatePath("/personal");
 }
 
 export async function refreshStockAnalysis() {

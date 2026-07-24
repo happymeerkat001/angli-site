@@ -1,5 +1,5 @@
 import { californiaAirports, schoolBreaks } from "./config";
-import { buildFlexCandidates, windowsInBookingRange } from "./flex-dates";
+import { windowsInBookingRange } from "./flex-dates";
 import { getFlexFlightSnapshot } from "./flights";
 import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
@@ -129,12 +129,10 @@ export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindo
   if (windows.length === 0) return { status: "ok", value: [] };
   const results = await Promise.all(windows.map(async (window) => {
     try {
-      const responses = await Promise.all(buildFlexCandidates(window).map(async (candidate) => {
-        const response = await fetch(serpApiExploreUrl(candidate, apiKey), { next: { revalidate: false, tags: ["flights"] }, signal: AbortSignal.timeout(15_000) });
-        if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
-        return (await response.json() as SerpExploreResponse).destinations ?? [];
-      }));
-      return { window, failed: false, options: selectTopAnywhereFlights(responses.flat(), window.label) };
+      const response = await fetch(serpApiExploreUrl(window, apiKey), { signal: AbortSignal.timeout(15_000) });
+      if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
+      const data = await response.json() as SerpExploreResponse;
+      return { window, failed: false, options: selectTopAnywhereFlights(data.destinations ?? [], window.label) };
     } catch (error) {
       console.error(`Flight explore unavailable for ${window.label}`, error);
       return { window, failed: true, options: [] as AnywhereFlightOption[] };

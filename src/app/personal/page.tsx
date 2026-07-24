@@ -1,7 +1,6 @@
 import { CalendarDays, Lightbulb, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
-import { getAnywhereDashboard } from "@/lib/dashboard/flights-anywhere";
-import { getFlightDashboard } from "@/lib/dashboard/flights";
+import { readFlightState } from "@/lib/dashboard/flight-store";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
@@ -32,14 +31,15 @@ export default async function PersonalPage() {
   const now = new Date();
   const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
   const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
-  const [agenda, anywhere, flights, news, stock, stockHeadlines] = await Promise.all([
+  const [agenda, flightState, news, stock, stockHeadlines] = await Promise.all([
     getCalendarAgenda(),
-    getAnywhereDashboard(),
-    getFlightDashboard(),
+    readFlightState(),
     getNewsDashboard(),
     getStockSnapshot(),
     getStockHeadlines(),
   ]);
+  const flights = flightState?.flights ?? [];
+  const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
   const stockAnalysis = stock.status === "ok"
     ? await getStockAnalysis(stock.value, stockHeadlines.status === "ok" ? stockHeadlines.value : [])
     : null;
@@ -120,7 +120,7 @@ export default async function PersonalPage() {
 
       <section aria-labelledby="fares-heading">
         <form action={refreshFlights} className="mb-4"><RefreshButton label="Refresh flights" /></form>
-        <p className="mb-4 text-sm text-muted">Last refreshed: {new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(Math.max(...flights.map(({ fetchedAt }) => new Date(fetchedAt).getTime()))))}</p>
+        <p className="mb-4 text-sm text-muted">Last refreshed: {flightState ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(flightState.fetchedAt)) : "Not yet refreshed"}</p>
         <p className="mb-4 text-sm text-muted">
           Prices below can be stale.{" "}
           <a href={googleFlightsUrl} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">
