@@ -7,7 +7,7 @@ const ALLOWED_ROOTS = [
   "z.Ingestion/People",
   "z.Ingestion/personal.Spaces",
   "z.Ingestion/read.done",
-  "Hedy-AI",
+  "z.Ingestion/Hedy-AI",
 ];
 
 export function shouldExcludeInsightSourcePath(path: string) {
