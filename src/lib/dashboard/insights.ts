@@ -1,5 +1,11 @@
 import type { InsightEntry } from "./types";
 
+export function deriveTitleFromFilename(filename: string) {
+  const extensionStripped = filename.replace(/\.md$/, "");
+  const datePrefixStripped = extensionStripped.replace(/^(?:\d{8}|\d{4}-\d{2}-\d{2})\s+/, "").trim();
+  return datePrefixStripped || extensionStripped;
+}
+
 export function splitNoteSections(markdown: string) {
   const [firstLine, ...lines] = markdown.split(/\r?\n/);
   const title = firstLine.startsWith("# ") ? firstLine.slice(2).trim() : "";

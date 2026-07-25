@@ -1,5 +1,1875 @@
 [
   {
+    "id": "openai-official-codex-manual-1",
+    "noteTitle": "OpenAI Official - Codex Manual",
+    "insightText": "'failure' }}\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n    outputs:\n      has_patch: ${{ steps.diff.outputs.has_patch }}\n    steps:\n      - uses: actions/checkout@v5\n        with:\n          ref: ${{ github.event.workflow_run.head_sha }}\n          fetch-depth: 0\n          persist-credentials: false\n\n      - uses: actions/setup-node@v4\n        with:\n          node-version: \"20\"\n\n      - name: Install dependencies\n        run: |\n          if [ -f package-lock.json ]; then npm ci; fi\n\n      - name: Run Codex\n        uses: openai/codex-action@v1\n        with:\n          openai-api-key: ${{ secrets.OPENAI_API_KEY }}\n          prompt: |\n            The CI workflow \"${{ github.event.workflow_run.name }}\" failed for commit\n            ${{ github.event.workflow_run.head_sha }}.\n\n            Run `npm test --silent` to reproduce the failure. Identify the minimal\n            change needed to make the tests pass, implement only that change, and\n            run `npm test --silent` again.\n\n            Do not refactor unrelated files.\n\n      - name: Create patch artifact\n        id: diff\n        run: |\n          git add -N .\n          git diff --binary HEAD > codex.patch\n          if [ -s codex.patch ]; then\n            echo \"has_patch=true\" >> \"$GITHUB_OUTPUT\"\n          else\n            echo \"has_patch=false\" >> \"$GITHUB_OUTPUT\"\n          fi\n\n      - name: Upload patch artifact\n        if: steps.diff.outputs.has_patch"
+  },
+  {
+    "id": "openai-official-codex-manual-2",
+    "noteTitle": "OpenAI Official - Codex Manual",
+    "insightText": "'true'\n    permissions:\n      contents: write\n      pull-requests: write\n    steps:\n      - uses: actions/checkout@v5\n        with:\n          ref: ${{ github.event.workflow_run.head_sha }}\n          fetch-depth: 0\n\n      - uses: actions/download-artifact@v4\n        with:\n          name: codex-fix-patch\n\n      - name: Apply Codex patch\n        run: git apply --index codex.patch\n\n      - name: Open pull request\n        env:\n          GH_TOKEN: ${{ github.token }}\n          FAILED_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}\n          FAILED_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}\n          RUN_ID: ${{ github.event.workflow_run.run_id }}\n        run: |\n          branch=\"codex/auto-fix-$RUN_ID\"\n\n          git config user.name \"github-actions[bot]\"\n          git config user.email \"41898282+github-actions[bot]@users.noreply.github.com\"\n          git switch -c \"$branch\"\n          git commit -m \"Auto-fix failing CI via Codex\"\n          git push origin \"$branch\"\n\n          {\n            echo \"Codex generated this patch after CI failed for \\`$FAILED_HEAD_SHA\\`.\"\n            echo\n            echo \"Review the changes before merging.\"\n          } > pr-body.md\n\n          gh pr create \\\n            --base \"$FAILED_HEAD_BRANCH\" \\\n            --head \"$branch\" \\\n            --title \"Auto-fix failing CI via Codex\" \\\n            --body-file pr-body.md\n```\n\n#### Advanced stdin piping\n\nWhen another command produces input for Codex, choose the stdin pattern based on where the instruction should come from. Use prompt-plus-stdin when you already know the instruction and want to pass piped output as context. Use `codex exec -` when stdin should become the full prompt.\n\n#### Use prompt-plus-stdin\n\nPrompt-plus-stdin is useful when another command already produces the data you want Codex to inspect. In this mode, you write the instruction yourself and pipe in the output as context, which makes it a natural fit for CLI workflows built around command output, logs, and generated data.\n\n```bash\nnpm test 2>&1 \\\n  | codex exec \"summarize the failing tests and propose the smallest likely fix\" \\\n  | tee test-summary.md\n```\n\n#### More prompt-plus-stdin examples\n\n#### Summarize logs\n\n```bash\ntail -n 200 app.log \\\n  | codex exec \"identify the likely root cause, cite the most important errors, and suggest the next three debugging steps\" \\\n  > log-triage.md\n```\n\n#### Inspect TLS or HTTP issues\n\n```bash\ncurl -vv https://api.example.com/health 2>&1 \\\n  | codex exec \"explain the TLS or HTTP failure and suggest the most likely fix\" \\\n  > tls-debug.md\n```\n\n#### Prepare a Slack-ready update\n\n```bash\ngh run view 123456 --log \\\n  | codex exec \"write a concise Slack-ready update on the CI failure, including the likely cause and next step\" \\\n  | pbcopy\n```\n\n#### Draft a pull request comment from CI logs\n\n```bash\ngh run view 123456 --log \\\n  | codex exec \"summarize the failure in 5 bullets for the pull request thread\" \\\n  | gh pr comment 789 --body-file -\n```\n\n### Use Codex with the Agents SDK\n\nSource: [Use Codex with the Agents SDK](https://learn.chatgpt.com/docs/mcp-server.md)\n\nYou can run Codex as an MCP server and connect it from other MCP clients (for example, an agent built with the [OpenAI Agents SDK MCP integration](https://developers.openai.com/api/docs/guides/agents/integrations-observability#mcp)).\n\nTo start Codex as an MCP server, you can use the following command:\n\n```bash\ncodex mcp-server\n```\n\nYou can launch a Codex MCP server with the [Model Context Protocol Inspector](https://modelcontextprotocol.io/legacy/tools/inspector):\n\n```bash\nnpx @modelcontextprotocol/inspector codex mcp-server\n```\n\nSend a `tools/list` request to see two tools:\n\n**`codex`**: Run a Codex session with the following prompt and configuration overrides:\n\n| Property                 | Type     | Description                                                                                              |\n| ------------------------ | -------- | -------------------------------------------------------------------------------------------------------- |\n| **`prompt`** (required)  | `string` | The initial user prompt to start the Codex conversation.                                                 |\n| `approval-policy`        | `string` | Approval policy for shell commands generated by the model: `untrusted`, `on-request`, and `never`.       |\n| `base-instructions`      | `string` | The set of instructions to use instead of the default ones.                                              |\n| `compact-prompt`         | `string` | Prompt used when compacting the conversation.                                                            |\n| `config`                 | `object` | Individual configuration settings that override what's in `$CODEX_HOME/config.toml`.                     |\n| `cwd`                    | `string` | Working directory for the session. If relative, resolved against the server process's current directory. |\n| `developer-instructions` | `string` | Developer instructions injected as a developer-role message.                                             |\n| `model`                  | `string` | Optional override for the model name (for example, `gpt-5.4`).                                           |\n| `sandbox`                | `string` | Sandbox mode: `read-only`, `workspace-write`, or `danger-full-access`.                                   |\n\n**`codex-reply`**: Continue a Codex session by providing the thread ID and prompt. The `codex-reply` tool takes these properties:\n\n| Property                      | Type   | Description                                               |\n| ----------------------------- | ------ | --------------------------------------------------------- |\n| **`prompt`** (required)       | string | The next user prompt to continue the Codex conversation.  |\n| **`threadId`** (required)     | string | The ID of the thread to continue.                         |\n| `conversationId` (deprecated) | string | Deprecated alias for `threadId` (kept for compatibility). |\n\nUse the `threadId` from `structuredContent.threadId` in the `tools/call` response. Approval prompts (exec/patch) also include `threadId` in their `params` payload.\n\nExample response payload:\n\n```json\n{\n  \"structuredContent\": {\n    \"threadId\": \"019bbb20-bff6-7130-83aa-bf45ab33250e\",\n    \"content\": \"`ls -lah` (or `ls -alh`) — long listing, includes dotfiles, human-readable sizes.\"\n  },\n  \"content\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"`ls -lah` (or `ls -alh`) — long listing, includes dotfiles, human-readable sizes.\"\n    }\n  ]\n}\n```\n\nNote modern MCP clients generally report only `\"structuredContent\"` as the result of a tool call, if present, though the Codex MCP server also returns `\"content\"` for the benefit of older MCP clients.\n\nCodex CLI can do far more than run ad-hoc tasks. By exposing the CLI as a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server and orchestrating it with the OpenAI Agents SDK, you can create deterministic, reviewable workflows that scale from a single agent to a complete software delivery pipeline.\n\nThis guide walks through the same workflow showcased in the [OpenAI Cookbook](https://github.com/openai/openai-cookbook/blob/main/examples/codex/codex_mcp_agents_sdk/building_consistent_workflows_codex_cli_agents_sdk.ipynb). You will:\n\n- launch Codex CLI as a long-running MCP server,\n- build a focused single-agent workflow that produces a playable browser game, and\n- orchestrate a multi-agent team with hand-offs, guardrails, and full traces you can review afterwards.\n\nBefore starting, make sure you have:\n\n- [Codex CLI](https://learn.chatgpt.com/docs/codex/cli) installed locally so the `codex` command is available.\n- Python 3.10+ with `pip`.\n- Node.js 18+ if you want to run the MCP Inspector example above.\n- An OpenAI API key stored locally. You can create or manage keys in the [OpenAI dashboard](https://platform.openai.com/account/api-keys).\n\nCreate a working directory for the guide and add your API key to a `.env` file:\n\n```bash\nmkdir codex-workflows\ncd codex-workflows\nprintf \"OPENAI_API_KEY=sk-...\" > .env\n```\n\n#### Install dependencies\n\nThe Agents SDK handles orchestration across Codex, hand-offs, and traces. Install the latest SDK packages:\n\n```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install --upgrade openai openai-agents python-dotenv\n```\n\nActivating a virtual environment keeps the SDK dependencies isolated from the\nrest of your system.\n\n#### Initialize Codex CLI as an MCP server\n\nStart by turning Codex CLI into an MCP server that the Agents SDK can call. The server exposes two tools (`codex()` to start a conversation and `codex-reply()` to continue one) and keeps Codex alive across multiple agent turns.\n\nCreate a file called `codex_mcp.py` and add the following:\n\n```python\nimport asyncio\n\nfrom agents import Agent, Runner\nfrom agents.mcp import MCPServerStdio\n\nasync def main() -> None:\n    async with MCPServerStdio(\n        name=\"Codex CLI\",\n        params={\n            \"command\": \"codex\",\n            \"args\": [\"mcp-server\"],\n        },\n        client_session_timeout_seconds=360000,\n    ) as codex_mcp_server:\n        print(\"Codex MCP server started.\")\n        # More logic coming in the next sections.\n        return\n\nif __name__"
+  },
+  {
+    "id": "moonshot-official-kimi-k2-thinking-1",
+    "noteTitle": "Moonshot Official - Kimi K2 Thinking",
+    "insightText": "\"succeeded\":\n            return fiber[\"context\"].get(\"output\") or fiber[\"context\"].get(\"encrypted_output\")\n        \n        if \"error\" in fiber:\n            return f\"Error: {fiber['error']}\"\n        if \"error\" in fiber.get(\"context\", {}):\n            return f\"Error: {fiber['context']['error']}\"\n        return \"Error: Unknown error\"\n\n    def close(self):\n        \"\"\"Close the client connection\"\"\"\n        self.httpx.close()\n\n\n# Initialize client\nbase_url = os.getenv(\"MOONSHOT_BASE_URL\", \"https://api.moonshot.ai/v1\")\napi_key = os.getenv(\"MOONSHOT_API_KEY\")\n\nif not api_key:\n    raise ValueError(\"MOONSHOT_API_KEY environment variable not set. Please set your API key.\")\n\nprint(f\"Base URL: {base_url}\")\nprint(f\"API Key: {api_key[:10]}...{api_key[-10:] if len(api_key) > 20 else api_key}\\n\")\n\nclient = FormulaChatClient(base_url, api_key)\n\n# Define the official tool Formula URIs to use\nformula_uris = [\n    \"moonshot/date:latest\",\n    \"moonshot/web-search:latest\"\n]\n\n# Load all tool definitions and build mapping\nprint(\"Loading official tools...\")\nall_tools = []\ntool_to_uri = {}  # function.name -> formula_uri\n\nfor uri in formula_uris:\n    try:\n        tools = client.get_tools(uri)\n        for tool in tools:\n            func = tool.get(\"function\")\n            if func:\n                func_name = func.get(\"name\")\n                if func_name:\n                    tool_to_uri[func_name] = uri\n                    all_tools.append(tool)\n                    print(f\"  Loaded tool: {func_name} from {uri}\")\n    except Exception as e:\n        print(f\"  Warning: Failed to load tool {uri}: {e}\")\n        continue\n\nprint(f\"Loaded {len(all_tools)} tools in total\\n\")\n\nif not all_tools:\n    raise ValueError(\"No tools loaded. Please check API key and network connection.\")\n\n# Initialize message list\nmessages = [\n    {\n        \"role\": \"system\",\n        \"content\": \"You are Kimi, a professional news analyst. You excel at collecting, analyzing, and organizing information to generate high-quality news reports.\",\n    },\n]\n\n# User request to generate today's news report\nuser_request = \"Please help me generate a daily news report including important technology, economy, and society news.\"\nmessages.append({\n    \"role\": \"user\",\n    \"content\": user_request\n})\n\nprint(f\"User request: {user_request}\\n\")\n\n# Begin multi-step conversation loop\nmax_iterations = 10  # Prevent infinite loops\nfor iteration in range(max_iterations):\n    try:\n        completion = client.openai.chat.completions.create(\n            model=client.model,\n            messages=messages,\n            max_tokens=1024 * 32,\n            tools=all_tools,\n        )\n    except openai.AuthenticationError as e:\n        print(f\"Authentication error: {e}\")\n        print(\"Please check if the API key is correct and has the required permissions\")\n        raise\n    except Exception as e:\n        print(f\"Error while calling the model: {e}\")\n        raise\n    \n    # Get response\n    message = completion.choices[0].message\n    \n    # Print reasoning process\n    if hasattr(message, \"reasoning_content\"):\n        print(f\""
+  },
+  {
+    "id": "asian-american-religious-history-1",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Puritanism"
+  },
+  {
+    "id": "asian-american-religious-history-2",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "historiographic"
+  },
+  {
+    "id": "asian-american-religious-history-3",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Religious History"
+  },
+  {
+    "id": "asian-american-religious-history-4",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Asian bodies"
+  },
+  {
+    "id": "asian-american-religious-history-5",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "mid-nineteenth"
+  },
+  {
+    "id": "asian-american-religious-history-6",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Gold Rush"
+  },
+  {
+    "id": "asian-american-religious-history-7",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "themes"
+  },
+  {
+    "id": "asian-american-religious-history-8",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "prior"
+  },
+  {
+    "id": "asian-american-religious-history-9",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "foundational"
+  },
+  {
+    "id": "asian-american-religious-history-10",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "legacies"
+  },
+  {
+    "id": "asian-american-religious-history-11",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "solidarity"
+  },
+  {
+    "id": "asian-american-religious-history-12",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "intellect"
+  },
+  {
+    "id": "asian-american-religious-history-13",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "collective"
+  },
+  {
+    "id": "asian-american-religious-history-14",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "culture"
+  },
+  {
+    "id": "asian-american-religious-history-15",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Miller"
+  },
+  {
+    "id": "asian-american-religious-history-16",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "first generation"
+  },
+  {
+    "id": "asian-american-religious-history-17",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "plurality"
+  },
+  {
+    "id": "asian-american-religious-history-18",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "loss"
+  },
+  {
+    "id": "asian-american-religious-history-19",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "plurality"
+  },
+  {
+    "id": "asian-american-religious-history-20",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "exceptional"
+  },
+  {
+    "id": "asian-american-religious-history-21",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Hall"
+  },
+  {
+    "id": "asian-american-religious-history-22",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Transatlantic"
+  },
+  {
+    "id": "asian-american-religious-history-23",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "transnational"
+  },
+  {
+    "id": "asian-american-religious-history-24",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "immigrants"
+  },
+  {
+    "id": "asian-american-religious-history-25",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "dissents"
+  },
+  {
+    "id": "asian-american-religious-history-26",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "orthodoxy"
+  },
+  {
+    "id": "asian-american-religious-history-27",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "declension"
+  },
+  {
+    "id": "asian-american-religious-history-28",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "democratic"
+  },
+  {
+    "id": "asian-american-religious-history-29",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "lived religion"
+  },
+  {
+    "id": "asian-american-religious-history-30",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "democratized"
+  },
+  {
+    "id": "asian-american-religious-history-31",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "early republic"
+  },
+  {
+    "id": "asian-american-religious-history-32",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "conservative"
+  },
+  {
+    "id": "asian-american-religious-history-33",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "hegemonic"
+  },
+  {
+    "id": "asian-american-religious-history-34",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "regional"
+  },
+  {
+    "id": "asian-american-religious-history-35",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "violence"
+  },
+  {
+    "id": "asian-american-religious-history-36",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Christianization"
+  },
+  {
+    "id": "asian-american-religious-history-37",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "civilization"
+  },
+  {
+    "id": "asian-american-religious-history-38",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "churches"
+  },
+  {
+    "id": "asian-american-religious-history-39",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "patriarchal"
+  },
+  {
+    "id": "asian-american-religious-history-40",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "white supremacist"
+  },
+  {
+    "id": "asian-american-religious-history-41",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "White nationalism"
+  },
+  {
+    "id": "asian-american-religious-history-42",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "White supremacy"
+  },
+  {
+    "id": "asian-american-religious-history-43",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "identity"
+  },
+  {
+    "id": "asian-american-religious-history-44",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "leaders"
+  },
+  {
+    "id": "asian-american-religious-history-45",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "missionaries"
+  },
+  {
+    "id": "asian-american-religious-history-46",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "African Americans"
+  },
+  {
+    "id": "asian-american-religious-history-47",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "W.E.B. Du Bois"
+  },
+  {
+    "id": "asian-american-religious-history-48",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "racial justice"
+  },
+  {
+    "id": "asian-american-religious-history-49",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "democracy"
+  },
+  {
+    "id": "asian-american-religious-history-50",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "art"
+  },
+  {
+    "id": "asian-american-religious-history-51",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "religion"
+  },
+  {
+    "id": "asian-american-religious-history-52",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "post-reconstruction"
+  },
+  {
+    "id": "asian-american-religious-history-53",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "whiteness"
+  },
+  {
+    "id": "asian-american-religious-history-54",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "global"
+  },
+  {
+    "id": "asian-american-religious-history-55",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Native Americans"
+  },
+  {
+    "id": "asian-american-religious-history-56",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "conversion"
+  },
+  {
+    "id": "asian-american-religious-history-57",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "colonization"
+  },
+  {
+    "id": "asian-american-religious-history-58",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "empowered"
+  },
+  {
+    "id": "asian-american-religious-history-59",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "republican politics"
+  },
+  {
+    "id": "asian-american-religious-history-60",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Social-Political context"
+  },
+  {
+    "id": "asian-american-religious-history-61",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Civil War"
+  },
+  {
+    "id": "asian-american-religious-history-62",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "slavery"
+  },
+  {
+    "id": "asian-american-religious-history-63",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "reasonableness"
+  },
+  {
+    "id": "asian-american-religious-history-64",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Baconian reason"
+  },
+  {
+    "id": "asian-american-religious-history-65",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "black theology"
+  },
+  {
+    "id": "asian-american-religious-history-66",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "metaphysical"
+  },
+  {
+    "id": "asian-american-religious-history-67",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "privileged"
+  },
+  {
+    "id": "asian-american-religious-history-68",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "mind"
+  },
+  {
+    "id": "asian-american-religious-history-69",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "intuition"
+  },
+  {
+    "id": "asian-american-religious-history-70",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "clairvoyance"
+  },
+  {
+    "id": "asian-american-religious-history-71",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "‘revelation’"
+  },
+  {
+    "id": "asian-american-religious-history-72",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "higher guidance"
+  },
+  {
+    "id": "asian-american-religious-history-73",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Evangelicalism"
+  },
+  {
+    "id": "asian-american-religious-history-74",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "emotional"
+  },
+  {
+    "id": "asian-american-religious-history-75",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "occults"
+  },
+  {
+    "id": "asian-american-religious-history-76",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Universalists"
+  },
+  {
+    "id": "asian-american-religious-history-77",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Transcendentalists"
+  },
+  {
+    "id": "asian-american-religious-history-78",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "self-discovery"
+  },
+  {
+    "id": "asian-american-religious-history-79",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Confucianism"
+  },
+  {
+    "id": "asian-american-religious-history-80",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "non-Christian"
+  },
+  {
+    "id": "asian-american-religious-history-81",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "East"
+  },
+  {
+    "id": "asian-american-religious-history-82",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Asian American immigrants"
+  },
+  {
+    "id": "asian-american-religious-history-83",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "nineteenth"
+  },
+  {
+    "id": "asian-american-religious-history-84",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "twentieth"
+  },
+  {
+    "id": "asian-american-religious-history-85",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Puritans"
+  },
+  {
+    "id": "asian-american-religious-history-86",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "fundamentalists"
+  },
+  {
+    "id": "asian-american-religious-history-87",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "evangelicals"
+  },
+  {
+    "id": "asian-american-religious-history-88",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "racial ideology"
+  },
+  {
+    "id": "asian-american-religious-history-89",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "white supremacy"
+  },
+  {
+    "id": "asian-american-religious-history-90",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "white nationalism"
+  },
+  {
+    "id": "asian-american-religious-history-91",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "transnationalism"
+  },
+  {
+    "id": "asian-american-religious-history-92",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "democracy"
+  },
+  {
+    "id": "asian-american-religious-history-93",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "solidarity"
+  },
+  {
+    "id": "asian-american-religious-history-94",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "missions"
+  },
+  {
+    "id": "asian-american-religious-history-95",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "World Christianity"
+  },
+  {
+    "id": "asian-american-religious-history-96",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "cultures"
+  },
+  {
+    "id": "asian-american-religious-history-97",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "missionaries"
+  },
+  {
+    "id": "asian-american-religious-history-98",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "influenced"
+  },
+  {
+    "id": "asian-american-religious-history-99",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "global"
+  },
+  {
+    "id": "asian-american-religious-history-100",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Western"
+  },
+  {
+    "id": "asian-american-religious-history-101",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "imperialism"
+  },
+  {
+    "id": "asian-american-religious-history-102",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "colonialism"
+  },
+  {
+    "id": "asian-american-religious-history-103",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "non-Western"
+  },
+  {
+    "id": "asian-american-religious-history-104",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "linguists"
+  },
+  {
+    "id": "asian-american-religious-history-105",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Bible translation"
+  },
+  {
+    "id": "asian-american-religious-history-106",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "mediators"
+  },
+  {
+    "id": "asian-american-religious-history-107",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "empowering"
+  },
+  {
+    "id": "asian-american-religious-history-108",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "\"God\""
+  },
+  {
+    "id": "asian-american-religious-history-109",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Conversion"
+  },
+  {
+    "id": "asian-american-religious-history-110",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Missionaries"
+  },
+  {
+    "id": "asian-american-religious-history-111",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Liberalism"
+  },
+  {
+    "id": "asian-american-religious-history-112",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "unilateral"
+  },
+  {
+    "id": "asian-american-religious-history-113",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "challenged"
+  },
+  {
+    "id": "asian-american-religious-history-114",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "destabilized"
+  },
+  {
+    "id": "asian-american-religious-history-115",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Peal Buck"
+  },
+  {
+    "id": "asian-american-religious-history-116",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "ecumenical"
+  },
+  {
+    "id": "asian-american-religious-history-117",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "secularization"
+  },
+  {
+    "id": "asian-american-religious-history-118",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "William James"
+  },
+  {
+    "id": "asian-american-religious-history-119",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "science"
+  },
+  {
+    "id": "asian-american-religious-history-120",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "religion"
+  },
+  {
+    "id": "asian-american-religious-history-121",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Reinhold Niebuhr"
+  },
+  {
+    "id": "asian-american-religious-history-122",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Foreign"
+  },
+  {
+    "id": "asian-american-religious-history-123",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Home"
+  },
+  {
+    "id": "asian-american-religious-history-124",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Cultural"
+  },
+  {
+    "id": "asian-american-religious-history-125",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "cultural exchange"
+  },
+  {
+    "id": "asian-american-religious-history-126",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "self-awareness"
+  },
+  {
+    "id": "asian-american-religious-history-127",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "women"
+  },
+  {
+    "id": "asian-american-religious-history-128",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "identity politics"
+  },
+  {
+    "id": "asian-american-religious-history-129",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "ethnocentric"
+  },
+  {
+    "id": "asian-american-religious-history-130",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "racist"
+  },
+  {
+    "id": "asian-american-religious-history-131",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "culture"
+  },
+  {
+    "id": "asian-american-religious-history-132",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "race"
+  },
+  {
+    "id": "asian-american-religious-history-133",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Missions"
+  },
+  {
+    "id": "asian-american-religious-history-134",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Race"
+  },
+  {
+    "id": "asian-american-religious-history-135",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "domestic missions"
+  },
+  {
+    "id": "asian-american-religious-history-136",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Robinson"
+  },
+  {
+    "id": "asian-american-religious-history-137",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "racist"
+  },
+  {
+    "id": "asian-american-religious-history-138",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "orientalist"
+  },
+  {
+    "id": "asian-american-religious-history-139",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "triangulation"
+  },
+  {
+    "id": "asian-american-religious-history-140",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "liberation theology"
+  },
+  {
+    "id": "asian-american-religious-history-141",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Asian American movement"
+  },
+  {
+    "id": "asian-american-religious-history-142",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "assimilation"
+  },
+  {
+    "id": "asian-american-religious-history-143",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "hybridity"
+  },
+  {
+    "id": "asian-american-religious-history-144",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Indian"
+  },
+  {
+    "id": "asian-american-religious-history-145",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "racialized"
+  },
+  {
+    "id": "asian-american-religious-history-146",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "central"
+  },
+  {
+    "id": "asian-american-religious-history-147",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "power"
+  },
+  {
+    "id": "asian-american-religious-history-148",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "legal"
+  },
+  {
+    "id": "asian-american-religious-history-149",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "educational"
+  },
+  {
+    "id": "asian-american-religious-history-150",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "popular"
+  },
+  {
+    "id": "asian-american-religious-history-151",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "agency"
+  },
+  {
+    "id": "asian-american-religious-history-152",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "commodification"
+  },
+  {
+    "id": "asian-american-religious-history-153",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "commercialization"
+  },
+  {
+    "id": "asian-american-religious-history-154",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "economic"
+  },
+  {
+    "id": "asian-american-religious-history-155",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "\"Orientalized\""
+  },
+  {
+    "id": "asian-american-religious-history-156",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "indicting function\""
+  },
+  {
+    "id": "asian-american-religious-history-157",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "critique"
+  },
+  {
+    "id": "asian-american-religious-history-158",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "multiculturalism,'"
+  },
+  {
+    "id": "asian-american-religious-history-159",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "flattens out"
+  },
+  {
+    "id": "asian-american-religious-history-160",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "solidarity"
+  },
+  {
+    "id": "asian-american-religious-history-161",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "objects"
+  },
+  {
+    "id": "asian-american-religious-history-162",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "white supremacy"
+  },
+  {
+    "id": "asian-american-religious-history-163",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "“lived” religious"
+  },
+  {
+    "id": "asian-american-religious-history-164",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "World Religion"
+  },
+  {
+    "id": "asian-american-religious-history-165",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Histories"
+  },
+  {
+    "id": "asian-american-religious-history-166",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "religion"
+  },
+  {
+    "id": "asian-american-religious-history-167",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "no history"
+  },
+  {
+    "id": "asian-american-religious-history-168",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "defined"
+  },
+  {
+    "id": "asian-american-religious-history-169",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Max Muller"
+  },
+  {
+    "id": "asian-american-religious-history-170",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Conversion"
+  },
+  {
+    "id": "asian-american-religious-history-171",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Assimilation"
+  },
+  {
+    "id": "asian-american-religious-history-172",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Adhesive"
+  },
+  {
+    "id": "asian-american-religious-history-173",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "ethnographic"
+  },
+  {
+    "id": "asian-american-religious-history-174",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "selectively"
+  },
+  {
+    "id": "asian-american-religious-history-175",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Chinese language"
+  },
+  {
+    "id": "asian-american-religious-history-176",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "common grounds"
+  },
+  {
+    "id": "asian-american-religious-history-177",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "“philosophy of life”"
+  },
+  {
+    "id": "asian-american-religious-history-178",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "philosophical Daoism"
+  },
+  {
+    "id": "asian-american-religious-history-179",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Religious Daoism"
+  },
+  {
+    "id": "asian-american-religious-history-180",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "transnationalism"
+  },
+  {
+    "id": "asian-american-religious-history-181",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "democracy"
+  },
+  {
+    "id": "asian-american-religious-history-182",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "immigration"
+  },
+  {
+    "id": "asian-american-religious-history-183",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "race"
+  },
+  {
+    "id": "asian-american-religious-history-184",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "white supremacy"
+  },
+  {
+    "id": "asian-american-religious-history-185",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "marginalized"
+  },
+  {
+    "id": "asian-american-religious-history-186",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "\"other-ed,\""
+  },
+  {
+    "id": "asian-american-religious-history-187",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "Orientalized"
+  },
+  {
+    "id": "asian-american-religious-history-188",
+    "noteTitle": "Asian American Religious History",
+    "insightText": "identities"
+  },
+  {
+    "id": "ht101-lesson-3-plan-b-1",
+    "noteTitle": "HT101 Lesson 3 Plan.b",
+    "insightText": "This beautiful meditation is a traditional **Catholic exercise for daily reflection**, often attributed to St. Augustine or St. Francis de Sales"
+  },
+  {
+    "id": "ht101-lesson-6-plan-a-1",
+    "noteTitle": "HT101 Lesson 6 Plan.a",
+    "insightText": "a foundational Christian theory of the atonement"
+  },
+  {
+    "id": "baylor-conference-1",
+    "noteTitle": "Baylor Conference",
+    "insightText": "Christian Intellectuals"
+  },
+  {
+    "id": "the-fight-for-asian-american-civil-rights-sarah-griffth-1",
+    "noteTitle": "The Fight for Asian American Civil Rights Sarah Griffth",
+    "insightText": "liberal Protestants"
+  },
+  {
+    "id": "the-fight-for-asian-american-civil-rights-sarah-griffth-2",
+    "noteTitle": "The Fight for Asian American Civil Rights Sarah Griffth",
+    "insightText": "social welfare"
+  },
+  {
+    "id": "expressions-of-the-life-that-1",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "link"
+  },
+  {
+    "id": "expressions-of-the-life-that-2",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "Chinese experience"
+  },
+  {
+    "id": "expressions-of-the-life-that-3",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "American homeland"
+  },
+  {
+    "id": "expressions-of-the-life-that-4",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "community"
+  },
+  {
+    "id": "expressions-of-the-life-that-5",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "transnational history"
+  },
+  {
+    "id": "expressions-of-the-life-that-6",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "gender and race"
+  },
+  {
+    "id": "expressions-of-the-life-that-7",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "significance"
+  },
+  {
+    "id": "expressions-of-the-life-that-8",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "community"
+  },
+  {
+    "id": "expressions-of-the-life-that-9",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "self-representation"
+  },
+  {
+    "id": "expressions-of-the-life-that-10",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "international feminist practices"
+  },
+  {
+    "id": "expressions-of-the-life-that-11",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "networks"
+  },
+  {
+    "id": "expressions-of-the-life-that-12",
+    "noteTitle": "“Expressions_of_the_Life_that_",
+    "insightText": "enlightening perspective"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-1",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "sociology"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-2",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Chicago"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-3",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "editor"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-4",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "methodologies"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-5",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Ethnicity"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-6",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "race"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-7",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "gender"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-8",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "methodologies"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-9",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Kenyan Asians"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-10",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Ugandan Asians"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-11",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "inter-ethnic tensions"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-12",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "feminized"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-13",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "diversified"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-14",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "male chauvinism"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-15",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "internationally"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-16",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "other disciplines"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-17",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "cultural diversity"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-18",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "welcome"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-19",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "mutual tolerance"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-20",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Multiculturalism"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-21",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "right-wing alternative"
+  },
+  {
+    "id": "ethnic-and-racial-studies-an-outline-history-of-forty-years-of-publishing-the-research-agenda-on-ethnic-and-racial-issues-22",
+    "noteTitle": "Ethnic and Racial Studies an outline history of forty years of publishing the research agenda on ethnic and racial issues",
+    "insightText": "Theodore Roosevelt"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-1",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "social movements"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-2",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "1960s and 1970s"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-3",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "political landscape"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-4",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "racial discourse"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-5",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Black Power"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-6",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "anti-war activist"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-7",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "global"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-8",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "decolonization"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-9",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "multiethnic alliance"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-10",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "voice"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-11",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "social and political movement"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-12",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Politics"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-13",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "20th century"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-14",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Organizations"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-15",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Campus Activism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-16",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Community Activism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-17",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Arts and Culture"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-18",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Interracialism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-19",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Internationalism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-20",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Intersections"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-21",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Gender"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-22",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Race"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-23",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Consolidations"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-24",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Transformation"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-25",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Asian American Movement"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-26",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "historians"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-27",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "discourses and ideologies"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-28",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Black Power"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-29",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "anti-war movements"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-30",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "decolonization"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-31",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "interracialism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-32",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "internationalism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-33",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "social change"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-34",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "interracial coalitions"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-35",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "transnational solidarities"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-36",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "capitalistic"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-37",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "imperialistic"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-38",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "people of color"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-39",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "organizations"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-40",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "events"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-41",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "ideas"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-42",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "interracialism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-43",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "internationalism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-44",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "comparative analyses"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-45",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Black Panther Party"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-46",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "Chicanos, Puerto Ricans, as well as Asian Americans"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-47",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "nationalist movement"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-48",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "racism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-49",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "racism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-50",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "imperialism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-51",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "alliances"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-52",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "home"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-53",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "abroad"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-54",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "civil rights movement"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-55",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "radical politics"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-56",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "new perspectives"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-57",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "power"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-58",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "self-determination"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-59",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "civil rights"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-60",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "racism"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-61",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "economic exploitation"
+  },
+  {
+    "id": "rethinking-the-asian-american-movement-62",
+    "noteTitle": "Rethinking the Asian American Movement",
+    "insightText": "society"
+  },
+  {
+    "id": "andee-tao-coding-1",
+    "noteTitle": "Andee Tao Coding",
+    "insightText": "debug"
+  },
+  {
+    "id": "coding-grade-automation-1",
+    "noteTitle": "Coding Grade automation",
+    "insightText": "-1;\n    });\n  });\n});\n```\n\n- **let result = '';**: Declares a variable `result` to store the search results.\n- **cy.get(selector).eq(index).should('be.visible').within(() => { ... })**: Finds the element `vbbgeneratetext`, selects the second one (index 1), asserts it is visible, and scopes subsequent commands to that element.\n- **cy.get('p').then(($p) => { ... })**: Finds the paragraph element within the scoped context and performs actions in the callback function.\n  - **const essayText = $p.text();**: Extracts the text content of the paragraph and stores it in `essayText`.\n  - **cy.log(essayText);**: Logs the extracted text to the Cypress console.\n  - **const normalizedText = essayText.toLocaleLowerCase();**: Converts the extracted text to lowercase for case-insensitive searching.\n  - **const keywords = ['is', 'a', 'b'];**: Declares an array of keywords to search for in the text.\n  - **result = keywords.filter(keyword => { return normalizedText.search(keyword) !"
+  },
+  {
+    "id": "understanding-when-a-backend-is-required-1",
+    "noteTitle": "Understanding When a Backend is Required:",
+    "insightText": "'8jOJ...';) ensure that even if\n         someone finds your database URL, they cannot see the door codes to your properties unless they are authenticated as\n         that specific user.\n   * Secret Management: If you didn't have a backend/auth setup, you would have to put your Slack Webhooks and API keys\n     directly in the HTML code, where anyone \"viewing source\" could steal them and post to your Slack or use your AI credits.\n\n  Summary Comparison for your Project\n\n  \n![](https://i.imgur.com/005Kuhw.png)\n\n  In short, the Backend provides the \"brain\" that works while you sleep, and Auth provides the \"lock\" that keeps your property\n  secrets safe.\n\n are you saying PadSplit and the Thermostat (TCC) credentials, Slack webhook, API keys would be exposed without a backend? I    \n   had a pin for the codes page, why was this not enough, would it also be exposed in HTML frontend?                              \n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n\n  ✓  ReadFile  docs/codes.html → Read lines 180-250 of 678 from docs/codes.html\n\n✦ The short answer is: Yes. Without a backend, your private credentials (passwords, secret keys) would be visible to anyone who\n  visits your website, and your \"PIN\" or password field would be a decorative lock on an open door.\n\n  Here is exactly how that exposure works:\n\n  1. Why the PIN/Password isn't enough on the Frontend\n  In your current docs/codes.html, you have a password field. If you didn't have a backend (Firebase Auth), your code would look\n  something like this:\n\n   1 // DON'T DO THIS - This is \"Frontend-Only\" logic\n   2 const PIN = \"1234\"; \n   3 if (userInput"
+  },
+  {
+    "id": "understanding-when-a-backend-is-required-2",
+    "noteTitle": "Understanding When a Backend is Required:",
+    "insightText": "'8jOJNgLoxpfyseZ0RY1PDZ1DXbi2';\n\n  This is the strongest security possible. It says: \"Only this one specific person in the whole world can see these codes.\" \n   * A PIN doesn't give you a uid. \n   * Email/Password login tells Firebase: \"This is user 8jOJ...\"\n   * Once Firebase knows your uid, it tells the database: \"It's him! Let him in.\"\n\n  3. Why a PIN alone is \"Fake Security\"\n  If you used a PIN only, your code would have to look like this:\n\n   1 if (userPin"
+  },
+  {
+    "id": "understanding-when-a-backend-is-required-3",
+    "noteTitle": "Understanding When a Backend is Required:",
+    "insightText": "'manager@email.com'.\n   * Result: They log in once with their own account and can see everything you allow them to.\n\n  Option C: The \"Public PIN\" vs \"Private Pass\"\n  You could build a middle-ground where the dashboard is protected by a simple PIN (which you give to the repairman), and only the\n  highly sensitive Codes page requires the full Email/Password login.\n\n  Which one should you choose?\n  If you want the least friction for your team:\n   1. Remove the auth gate from index.html.\n   2. Keep the auth gate on codes.html.\n   3. Update your Database Rules so \"Tasks\" and \"Notes\" are public (or protected by a simple string check), but \"Property Codes\"\n      remain locked to your uid.\n\n  Would you like me to help you modify the rules and the Dashboard code to make it public for your team while keeping the codes\n  private?\n▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄\n > firebase would allow this?                                                                                                     \n▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n✦ Yes, Firebase is designed exactly for this. It allows you to have \"Granular Security,\" meaning you can treat every piece of data\n  differently.\n\n  Here is how you would configure Firebase to allow your team in without a login while keeping your property codes locked:\n\n  1. Granular Database Rules\n  You can edit your firestore.rules to have different \"locks\" for different folders. It would look like this:\n\n    1 service cloud.firestore {\n    2   match /databases/{database}/documents {\n    3     \n    4     // 🔒 LOCKED: Only YOU (Tinghui) can see these\n    5     match /property_codes/{slug} {\n    6       allow read, write: if request.auth.uid"
+  },
+  {
+    "id": "understanding-when-a-backend-is-required-4",
+    "noteTitle": "Understanding When a Backend is Required:",
+    "insightText": "'8jOJNgLoxpfyseZ0RY1PDZ1DXbi2';\n    8     }\n    9\n   10     // 🔓 PUBLIC READ: Your team can SEE these without a login\n   11     // ✍️ PRIVATE WRITE: Only you can EDIT/SAVE them (or allow them too?)\n   12     match /notes/{document} {\n   13       allow read: if true; \n   14       allow write: if request.auth.uid"
+  },
+  {
+    "id": "understanding-when-a-backend-is-required-5",
+    "noteTitle": "Understanding When a Backend is Required:",
+    "insightText": "'8jOJNgLoxpfyseZ0RY1PDZ1DXbi2';\n   20     }\n   21\n   22     match /manual_tasks/{id} {\n   23       allow read: if true;\n   24       allow write: if request.auth.uid"
+  },
+  {
+    "id": "05-02-22-expert-feedback-1",
+    "noteTitle": "05.02.22 Expert Feedback",
+    "insightText": "Cause-effect"
+  },
+  {
+    "id": "05-02-22-expert-feedback-2",
+    "noteTitle": "05.02.22 Expert Feedback",
+    "insightText": "Explain"
+  },
+  {
+    "id": "05-02-22-expert-feedback-3",
+    "noteTitle": "05.02.22 Expert Feedback",
+    "insightText": "biggest/most important chunks first"
+  },
+  {
+    "id": "06-03-22-expert-feedback-1",
+    "noteTitle": "06.03.22 Expert Feedback",
+    "insightText": "related"
+  },
+  {
+    "id": "06-03-22-expert-feedback-2",
+    "noteTitle": "06.03.22 Expert Feedback",
+    "insightText": "chunking"
+  },
+  {
+    "id": "06-03-22-expert-feedback-3",
+    "noteTitle": "06.03.22 Expert Feedback",
+    "insightText": "similarities"
+  },
+  {
+    "id": "06-03-22-expert-feedback-4",
+    "noteTitle": "06.03.22 Expert Feedback",
+    "insightText": "trends"
+  },
+  {
+    "id": "06-03-22-expert-feedback-5",
+    "noteTitle": "06.03.22 Expert Feedback",
+    "insightText": "inquiry"
+  },
+  {
+    "id": "expert-feedback-04-07-22-1",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "- Clear Backbone with Major Chunks"
+  },
+  {
+    "id": "expert-feedback-04-07-22-2",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "inquiry to chunks"
+  },
+  {
+    "id": "expert-feedback-04-07-22-3",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "live review session purchase"
+  },
+  {
+    "id": "logic-layer-1",
+    "noteTitle": "Logic Layer",
+    "insightText": "importance based chunks"
+  },
+  {
+    "id": "logic-layer-2",
+    "noteTitle": "Logic Layer",
+    "insightText": "concepts"
+  },
+  {
+    "id": "logic-layer-3",
+    "noteTitle": "Logic Layer",
+    "insightText": "relate"
+  },
+  {
+    "id": "logic-layer-4",
+    "noteTitle": "Logic Layer",
+    "insightText": "intuitive chunks"
+  },
+  {
+    "id": "logic-layer-5",
+    "noteTitle": "Logic Layer",
+    "insightText": "broadly"
+  },
+  {
+    "id": "framing-bias-1",
+    "noteTitle": "framing bias",
+    "insightText": "chunking"
+  },
+  {
+    "id": "framing-bias-2",
+    "noteTitle": "framing bias",
+    "insightText": "good inquiry"
+  },
+  {
+    "id": "framing-bias-3",
+    "noteTitle": "framing bias",
+    "insightText": "relationships"
+  },
+  {
+    "id": "framing-bias-4",
+    "noteTitle": "framing bias",
+    "insightText": "similarities"
+  },
+  {
+    "id": "framing-bias-5",
+    "noteTitle": "framing bias",
+    "insightText": "trends"
+  },
+  {
+    "id": "framing-bias-6",
+    "noteTitle": "framing bias",
+    "insightText": "independent chunking"
+  },
+  {
+    "id": "ultraspeak-week-1-1",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "Honesty"
+  },
+  {
+    "id": "ultraspeak-week-1-2",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "integrity"
+  },
+  {
+    "id": "ultraspeak-week-1-3",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "Levels"
+  },
+  {
+    "id": "ultraspeak-week-1-4",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "something"
+  },
+  {
+    "id": "ultraspeak-week-1-5",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "strong"
+  },
+  {
+    "id": "ultraspeak-week-1-6",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "personality"
+  },
+  {
+    "id": "ultraspeak-week-1-7",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "Bulletproof"
+  },
+  {
+    "id": "ultraspeak-week-1-8",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "core message"
+  },
+  {
+    "id": "ultraspeak-week-1-9",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "stories"
+  },
+  {
+    "id": "ultraspeak-week-1-10",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "examples"
+  },
+  {
+    "id": "ultraspeak-week-1-11",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "note"
+  },
+  {
+    "id": "ultraspeak-week-1-12",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "simplify"
+  },
+  {
+    "id": "ultraspeak-week-1-13",
+    "noteTitle": "Ultraspeak week 1",
+    "insightText": "life experience"
+  },
+  {
+    "id": "ultraspeaking-purpose-1",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Connection"
+  },
+  {
+    "id": "ultraspeaking-purpose-2",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Content"
+  },
+  {
+    "id": "ultraspeaking-purpose-3",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Story"
+  },
+  {
+    "id": "ultraspeaking-purpose-4",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Peak Begin and End"
+  },
+  {
+    "id": "ultraspeaking-purpose-5",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "5 senses"
+  },
+  {
+    "id": "ultraspeaking-purpose-6",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Not Information"
+  },
+  {
+    "id": "ultraspeaking-purpose-7",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Structure"
+  },
+  {
+    "id": "ultraspeaking-purpose-8",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Support"
+  },
+  {
+    "id": "ultraspeaking-purpose-9",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Main Idea"
+  },
+  {
+    "id": "ultraspeaking-purpose-10",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "1 thing"
+  },
+  {
+    "id": "ultraspeaking-purpose-11",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Direction"
+  },
+  {
+    "id": "ultraspeaking-purpose-12",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Delivery"
+  },
+  {
+    "id": "ultraspeaking-purpose-13",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Feeling"
+  },
+  {
+    "id": "ultraspeaking-purpose-14",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Character"
+  },
+  {
+    "id": "ultraspeaking-purpose-15",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Integrity"
+  },
+  {
+    "id": "ultraspeaking-purpose-16",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Energy"
+  },
+  {
+    "id": "ultraspeaking-purpose-17",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Rap"
+  },
+  {
+    "id": "ultraspeaking-purpose-18",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "magic steps"
+  },
+  {
+    "id": "ultraspeaking-purpose-19",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Positive Feedback"
+  },
+  {
+    "id": "ultraspeaking-purpose-20",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Confident"
+  },
+  {
+    "id": "ultraspeaking-purpose-21",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Control"
+  },
+  {
+    "id": "ultraspeaking-purpose-22",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "personality"
+  },
+  {
+    "id": "ultraspeaking-purpose-23",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Calm"
+  },
+  {
+    "id": "my-notes-1",
+    "noteTitle": "My notes",
+    "insightText": "Paperwork"
+  },
+  {
+    "id": "va-hiring-1",
+    "noteTitle": "VA Hiring",
+    "insightText": "$150-$300"
+  },
+  {
+    "id": "va-hiring-2",
+    "noteTitle": "VA Hiring",
+    "insightText": "$100-$250"
+  },
+  {
+    "id": "va-hiring-3",
+    "noteTitle": "VA Hiring",
+    "insightText": "$100-$200"
+  },
+  {
+    "id": "va-hiring-4",
+    "noteTitle": "VA Hiring",
+    "insightText": "$100-$250"
+  },
+  {
+    "id": "prompts-1-1",
+    "noteTitle": "Prompts 1",
+    "insightText": "Act as a friendly, but sales savvy investor partner named @rep_name at a cash home buying company called Best Offer Depot (**IDENTITY)**."
+  },
+  {
+    "id": "prompts-1-2",
+    "noteTitle": "Prompts 1",
+    "insightText": "Your company sent @lead_name an initial cold text message, so @lead_name isn’t expecting to hear from you and may even be apprehensive to answer you. This company buys houses cash and the ultimate goal is to see if @lead_name would be a potential seller we want to buy from"
+  },
+  {
+    "id": "prompts-1-3",
+    "noteTitle": "Prompts 1",
+    "insightText": "(**SETTING**)"
+  },
+  {
+    "id": "prompts-1-4",
+    "noteTitle": "Prompts 1",
+    "insightText": "You can close quickly when needed and buy as-is. The company remodels homes after purchase so @lead_name doesn’t have to make repairs (**POSSIBLE FAQ**)."
+  },
+  {
+    "id": "prompts-1-5",
+    "noteTitle": "Prompts 1",
+    "insightText": "If @lead_name asks about anything not pertaining to real estate, tell @lead_name that you do not work in that industry, but can refer them elsewhere. If @lead_name asks you a personal question, come up with a sincere response. Do not tell @lead_name you are a bot. Keep your response less than 160 characters in length **(OPERATING BOX)**."
+  },
+  {
+    "id": "prompts-1-6",
+    "noteTitle": "Prompts 1",
+    "insightText": "act as a friendly, but sales savvy investor partner named @rep_name at the best dang cash home buying company called Best Offer Depot. Your company sent @lead_name an initial unsolicited text message… so @lead_name isn’t expecting to hear from you and may even be pissed that you’re reaching out because you’re likely not the first one! Your company buys houses cash and the ultimate goal is to see if @lead_name would be a potential seller we want to buy from (lucky them 😉). Your company is so awesome it can close quickly when needed and buys houses as-is! Who doesn’t love that? The company remodels homes after purchase so @lead_name doesn’t have to do annoying repairs. If @lead_name asks about anything not pertaining to real estate, tell @lead_name that you do not work in that industry, but can refer them to someone else naturally. If @lead_name asks you a personal question, come up with a sincere response. Do not tell @lead_name you are a bot… really though you aren’t a bot you’re @rep_name. Keep your response less than 160 characters in length."
+  },
+  {
+    "id": "expert-feedback-04-07-22-1",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "- Clear Backbone with Major Chunks"
+  },
+  {
+    "id": "expert-feedback-04-07-22-2",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "inquiry to chunks"
+  },
+  {
+    "id": "expert-feedback-04-07-22-3",
+    "noteTitle": "Expert Feedback 04.07.22",
+    "insightText": "live review session purchase"
+  },
+  {
+    "id": "ultraspeaking-steps-1",
+    "noteTitle": "Ultraspeaking Steps",
+    "insightText": "emotional arc"
+  },
+  {
+    "id": "ultraspeaking-steps-2",
+    "noteTitle": "Ultraspeaking Steps",
+    "insightText": "Pillars"
+  },
+  {
+    "id": "ultraspeaking-steps-3",
+    "noteTitle": "Ultraspeaking Steps",
+    "insightText": "bookmarks"
+  },
+  {
     "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-1",
     "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
     "insightText": "He predicts that human work shifts upward from writing each line toward requirements, architecture, risk control, evaluation, and improving the agent environment."
@@ -8,5 +1878,80 @@
     "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-2",
     "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
     "insightText": "The durable idea is to build a learning-and-verification loop, not a dependency on a fashionable AI coding tool. AI can amplify output, but unexamined output amplifies failure too. The valuable operator identifies the highest-leverage problem, delegates with clear guardrails, measures the result, and codifies what was learned so the next cycle is safer and faster."
+  },
+  {
+    "id": "andee-tao-architecture-1",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "To avoid overwhelm, it was advised to narrow focus and deep dive into one component (e.g., Redis) by building with it and testing operations like get, post, and delete."
+  },
+  {
+    "id": "andee-tao-architecture-2",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Understanding architecture comes through hands-on experimentation and recognizing limitations of chosen solutions in real use cases."
+  },
+  {
+    "id": "andee-tao-architecture-3",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "It was suggested that Ang manually identify problems in his codebase before using [[Artificial Intelligence]] to solve them, to improve system comprehension and debugging skills."
+  },
+  {
+    "id": "andee-tao-architecture-4",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "The discussion included the importance of modular design to allow future replacement of components."
+  },
+  {
+    "id": "andee-tao-architecture-5",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "A suggestion was made to **deep dive into one component at a time**—e.g., Redis—by building with it, testing operations (get, post, delete), and observing behavior."
+  },
+  {
+    "id": "andee-tao-architecture-6",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "The value of manually identifying issues before using [[Artificial Intelligence]] to solve them was emphasized to improve diagnostic and architectural reasoning skills."
+  },
+  {
+    "id": "andee-tao-architecture-7",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Choose one architectural component (e.g., Redis) and conduct a focused deep dive by building and testing it in a controlled environment."
+  },
+  {
+    "id": "andee-tao-architecture-8",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Manually identify one problem in the current project (e.g., file location, connection failure) before using [[Artificial Intelligence]] to solve it."
+  },
+  {
+    "id": "andee-tao-architecture-9",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Document architectural decisions in a structured way—e.g., pros and cons of each component in the four categories."
+  },
+  {
+    "id": "andee-tao-architecture-10",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "**Architecture should be learned incrementally**, one component or category at a time, rather than holistically."
+  },
+  {
+    "id": "andee-tao-architecture-11",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Hands-on experimentation is more valuable than theoretical study** for practical understanding."
+  },
+  {
+    "id": "andee-tao-architecture-12",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "**[[Artificial Intelligence]] should assist, not replace**, the decision-making and diagnostic process in architecture."
+  },
+  {
+    "id": "andee-tao-architecture-13",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Ang Li will experiment with Redis by running CRUD operations and observing performance in different scenarios."
+  },
+  {
+    "id": "andee-tao-architecture-14",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Focus on improving system understanding by isolating and solving one technical problem manually each week."
+  },
+  {
+    "id": "andee-tao-architecture-15",
+    "noteTitle": "Andee Tao Architecture",
+    "insightText": "Continue iterating on the dashboard project while gradually deepening architectural knowledge."
   }
 ]
