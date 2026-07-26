@@ -1,12 +1,36 @@
 import { expect, test } from "vitest";
 import { deriveTitleFromFilename, extractHighlights, extractInsightsFromNote, selectRandomInsight, splitNoteSections } from "./insights";
 
-const note = `# Note title\n**Source:** x\n**Date:** today\n**Language:** en\n**Transcript source:** x\n\n## AI Summary\nInline ==important idea== here.\n\n## Description\n==excluded==\n\n## YouTube Transcript\n==also excluded==`;
+const note = `# Note title\n**Source:** x\n**Date:** today\n**Language:** en\n**Transcript source:** x\n\n## AI Summary\nInline ==important idea worth keeping== here.\n\n## Description\n==excluded content that stays hidden==\n\n## YouTube Transcript\n==also excluded content that stays hidden==`;
 
 test("extracts eligible highlights while excluding description and transcript", () => {
   expect(splitNoteSections(note).title).toBe("Note title");
-  expect(extractInsightsFromNote(note)).toMatchObject([{ noteTitle: "Note title", insightText: "important idea" }]);
-  expect(extractHighlights("=====\n==full insight==")).toEqual(["full insight"]);
+  expect(extractInsightsFromNote(note)).toMatchObject([{ noteTitle: "Note title", insightText: "important idea worth keeping" }]);
+  expect(extractHighlights("=====\n==full insight from note==")).toEqual(["full insight from note"]);
+});
+
+test("keeps prose highlights while filtering short and code-heavy text", () => {
+  expect(extractHighlights(`
+==A durable idea worth remembering==
+==Energy==
+==A helpful thought==
+==\`\`\` {}; {} ;==
+==function run() {
+  return \`result\`;
+  console.log("done");
+}==
+==Reference implementation:
+\`\`\`js
+const value = true;
+\`\`\`
+Useful explanation follows here==
+==Use \`code\` terms in a durable explanation==
+==\`;\` \`{\` aa b==
+`)).toEqual([
+    "A durable idea worth remembering",
+    "Use `code` terms in a durable explanation",
+    "`;` `{` aa b",
+  ]);
 });
 
 test("cycles without immediate repeats until the pool is exhausted", () => {
