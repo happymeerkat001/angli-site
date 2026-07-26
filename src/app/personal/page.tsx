@@ -1,6 +1,7 @@
 import { CalendarDays, Lightbulb, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { readFlightState } from "@/lib/dashboard/flight-store";
+import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
@@ -9,6 +10,7 @@ import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-da
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
 import { RandomInsightCard } from "@/components/RandomInsightCard";
+import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
 import insights from "@/lib/dashboard/insights.generated.json";
 import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
@@ -31,9 +33,10 @@ export default async function PersonalPage() {
   const now = new Date();
   const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
   const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
-  const [agenda, flightState, news, stock, stockHeadlines] = await Promise.all([
+  const [agenda, flightState, schedulePhotoState, news, stock, stockHeadlines] = await Promise.all([
     getCalendarAgenda(),
     readFlightState(),
+    readSchedulePhotoState(),
     getNewsDashboard(),
     getStockSnapshot(),
     getStockHeadlines(),
@@ -61,6 +64,8 @@ export default async function PersonalPage() {
         </div>
         {agenda.status === "ok" ? <WeekGrid events={agenda.value} /> : <p className="mt-6 text-sm text-muted">{agenda.message}.</p>}
       </section>
+
+      <SchedulePhotoCard state={schedulePhotoState} />
 
       <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="insight-heading">
         <div className="mb-4 flex items-center gap-3"><Lightbulb className="text-accent" aria-hidden="true" /><h2 id="insight-heading" className="font-serif text-2xl font-semibold text-ink">Insight reminder</h2></div>

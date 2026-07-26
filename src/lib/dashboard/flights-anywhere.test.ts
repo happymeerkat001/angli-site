@@ -8,6 +8,7 @@ const originalSerpApiKey = process.env.SERP_API_KEY;
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
   if (originalSerpApiKey) process.env.SERP_API_KEY = originalSerpApiKey;
   else delete process.env.SERP_API_KEY;
 });
@@ -84,6 +85,8 @@ test("builds an explore request without an arrival airport", () => {
 });
 
 test("groups each break's explore results with its California fifth slot", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-07-24T00:00:00.000Z"));
   process.env.SERP_API_KEY = "test-key";
   const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input) => {
     const url = new URL(input.toString());

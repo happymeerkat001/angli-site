@@ -58,6 +58,7 @@ Vercel environment variables:
 - `GOOGLE_CALENDAR_IDS` (optional comma-separated override; otherwise all selected calendars are read)
 - `SERP_API_KEY` (SerpApi key for live Google Flights fares; without it every
   route falls back to "Live price unavailable today")
+- `BLOB_READ_WRITE_TOKEN` (Vercel Blob token for the private weekly schedule photo upload)
 - `STOCK_LLM_BASE_URL`, `STOCK_LLM_API_KEY`, `STOCK_LLM_MODEL` (optional OpenAI-compatible endpoint for the daily NVDA analysis)
 
 Create a Google Cloud OAuth client with only the read-only Calendar scope, then
