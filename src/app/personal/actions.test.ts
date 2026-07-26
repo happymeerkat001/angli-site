@@ -58,8 +58,9 @@ test("stores a new image, updates state, deletes the replaced blob, and revalida
   mocks.readSchedulePhotoState.mockResolvedValue(previous);
   mocks.put.mockResolvedValue({ url: "https://blob.example.test/current.jpg" });
 
-  await uploadSchedulePhoto(photoFormData(new File(["photo"], "schedule.jpg", { type: "image/jpeg" })));
+  const result = await uploadSchedulePhoto({ error: null }, photoFormData(new File(["photo"], "schedule.jpg", { type: "image/jpeg" })));
 
+  expect(result).toEqual({ error: null });
   expect(mocks.put).toHaveBeenCalledWith(expect.stringMatching(/^schedule-photo\/.+-schedule\.jpg$/), expect.any(File), { access: "public" });
   expect(mocks.writeSchedulePhotoState).toHaveBeenCalledWith({
     url: "https://blob.example.test/current.jpg",
@@ -70,27 +71,49 @@ test("stores a new image, updates state, deletes the replaced blob, and revalida
 });
 
 test("rejects a missing photo before any storage call", async () => {
-  await expect(uploadSchedulePhoto(new FormData())).rejects.toThrow("Select an image to upload.");
+  const result = await uploadSchedulePhoto({ error: null }, new FormData());
 
+  expect(result).toEqual({ error: "Select an image to upload." });
   expect(mocks.put).not.toHaveBeenCalled();
   expect(mocks.writeSchedulePhotoState).not.toHaveBeenCalled();
   expect(mocks.del).not.toHaveBeenCalled();
 });
 
 test("rejects a non-image photo before any storage call", async () => {
-  await expect(uploadSchedulePhoto(photoFormData(new File(["notes"], "schedule.txt", { type: "text/plain" })))).rejects.toThrow("Only image files can be uploaded.");
+  const result = await uploadSchedulePhoto(
+    { error: null },
+    photoFormData(new File(["notes"], "schedule.txt", { type: "text/plain" })),
+  );
 
+  expect(result).toEqual({ error: "Only image files can be uploaded." });
   expect(mocks.put).not.toHaveBeenCalled();
   expect(mocks.writeSchedulePhotoState).not.toHaveBeenCalled();
   expect(mocks.del).not.toHaveBeenCalled();
 });
 
-test("rejects an upload when KV or Blob storage is not configured", async () => {
+test("returns a friendly error when KV or Blob storage is not configured, for any image type", async () => {
   delete process.env.KV_REST_API_URL;
 
-  await expect(uploadSchedulePhoto(photoFormData(new File(["photo"], "schedule.jpg", { type: "image/jpeg" })))).rejects.toThrow("Schedule photo uploads are not configured.");
+  const result = await uploadSchedulePhoto(
+    { error: null },
+    photoFormData(new File(["photo"], "schedule.jpg", { type: "image/jpeg" })),
+  );
 
+  expect(result).toEqual({ error: "Schedule photo uploads are not configured." });
   expect(mocks.put).not.toHaveBeenCalled();
+  expect(mocks.writeSchedulePhotoState).not.toHaveBeenCalled();
+});
+
+test("returns a friendly error instead of throwing when the blob upload itself fails", async () => {
+  mocks.readSchedulePhotoState.mockResolvedValue(null);
+  mocks.put.mockRejectedValue(new Error("network blip"));
+
+  const result = await uploadSchedulePhoto(
+    { error: null },
+    photoFormData(new File(["photo"], "schedule.jpg", { type: "image/jpeg" })),
+  );
+
+  expect(result).toEqual({ error: "Upload failed. Please try again." });
   expect(mocks.writeSchedulePhotoState).not.toHaveBeenCalled();
 });
 
@@ -98,8 +121,12 @@ test("keeps the first uploaded photo without deleting a nonexistent previous blo
   mocks.readSchedulePhotoState.mockResolvedValue(null);
   mocks.put.mockResolvedValue({ url: "https://blob.example.test/first.jpg" });
 
-  await uploadSchedulePhoto(photoFormData(new File(["photo"], "schedule.png", { type: "image/png" })));
+  const result = await uploadSchedulePhoto(
+    { error: null },
+    photoFormData(new File(["photo"], "schedule.png", { type: "image/png" })),
+  );
 
+  expect(result).toEqual({ error: null });
   expect(mocks.writeSchedulePhotoState).toHaveBeenCalledWith({
     url: "https://blob.example.test/first.jpg",
     uploadedAt: expect.any(String),

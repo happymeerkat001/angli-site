@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { useRef } from "react";
+import { useFormState } from "react-dom";
 import { CalendarDays } from "lucide-react";
 import { uploadSchedulePhoto } from "@/app/personal/actions";
 import type { SchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 
 export function SchedulePhotoCard({ state }: { state: SchedulePhotoState | null }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [uploadState, formAction] = useFormState(uploadSchedulePhoto, { error: null });
 
   return (
     <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="schedule-photo-heading">
@@ -19,7 +21,7 @@ export function SchedulePhotoCard({ state }: { state: SchedulePhotoState | null 
         </div>
       </div>
 
-      <form ref={formRef} action={uploadSchedulePhoto} className="mt-5">
+      <form ref={formRef} action={formAction} className="mt-5">
         <label className="inline-flex cursor-pointer rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90">
           Upload a schedule photo
           <input
@@ -34,6 +36,12 @@ export function SchedulePhotoCard({ state }: { state: SchedulePhotoState | null 
           />
         </label>
       </form>
+
+      {uploadState.error ? (
+        <p role="alert" className="mt-3 text-sm text-red-600">
+          {uploadState.error}
+        </p>
+      ) : null}
 
       {state ? (
         <figure className="mt-6">
