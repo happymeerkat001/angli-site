@@ -19,7 +19,10 @@ export function splitNoteSections(markdown: string) {
 }
 
 export function extractHighlights(text: string) {
-  return [...text.matchAll(/(?<![=])==([^=][\s\S]*?)==/g)].map((match) => match[1].trim()).filter((value) => value && !/^=+$/.test(value));
+  return [...text.matchAll(/(?<![=])==([^=][\s\S]*?)==/g)].map((match) => match[1].trim()).filter((value) => {
+    const nonEmptyLines = value.split(/\r?\n/).filter((line) => line.trim());
+    return value && !/^=+$/.test(value) && value.split(/\s+/).length >= 4 && !value.includes("```") && (value.match(/[`{};]/g)?.length ?? 0) / value.length <= 0.5 && nonEmptyLines.filter((line) => /^\s{2,}/.test(line)).length / nonEmptyLines.length < 0.5;
+  });
 }
 
 export function extractInsightsFromNote(markdown: string, noteTitle?: string): InsightEntry[] {
