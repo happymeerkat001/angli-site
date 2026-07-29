@@ -56,6 +56,8 @@ export const californiaAirports: CaliforniaAirport[] = [
   { origin: "DFW", destination: "SAN", label: "San Diego, California" },
 ];
 
+export const serpApiRenewalDay = 16;
+
 export const fareSearch = {
   departureDate: "2027-06-18",
   returnDate: "2027-07-09",

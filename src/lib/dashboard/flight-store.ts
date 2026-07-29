@@ -1,7 +1,7 @@
 import { kv } from "@vercel/kv";
 import type { AnywhereWindowSection, FlightSnapshot, SourceResult } from "./types";
 
-export type FlightStoreState = { flights: FlightSnapshot[]; anywhere: SourceResult<AnywhereWindowSection[]>; fetchedAt: string };
+export type FlightStoreState = { flights: FlightSnapshot[]; anywhere: SourceResult<AnywhereWindowSection[]>; anywhereSeasonLabel: string; fetchedAt: string };
 export const STATE_KEY = "dashboard:flights:state";
 export const LOCK_KEY = "dashboard:flights:lock";
 

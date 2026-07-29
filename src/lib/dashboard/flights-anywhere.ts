@@ -1,5 +1,4 @@
 import { californiaAirports, schoolBreaks } from "./config";
-import { windowsInBookingRange } from "./flex-dates";
 import { getFlexFlightSnapshot } from "./flights";
 import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
@@ -121,12 +120,11 @@ async function getCaliforniaFaresByWindow(windows: FareWindow[]): Promise<Record
   return selectCaliforniaFaresByWindow(candidates);
 }
 
-export async function getAnywhereDashboard(): Promise<SourceResult<AnywhereWindowSection[]>> {
+export async function getAnywhereDashboard(windows: FareWindow[]): Promise<SourceResult<AnywhereWindowSection[]>> {
+  if (windows.length === 0) return { status: "ok", value: [] };
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
 
-  const windows = windowsInBookingRange(new Date(), schoolBreaks);
-  if (windows.length === 0) return { status: "ok", value: [] };
   const results = await Promise.all(windows.map(async (window) => {
     try {
       const response = await fetch(serpApiExploreUrl(window, apiKey), { signal: AbortSignal.timeout(15_000) });

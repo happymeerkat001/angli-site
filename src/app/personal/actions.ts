@@ -2,7 +2,7 @@
 
 import { del, put } from "@vercel/blob";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { refreshFlightState } from "@/lib/dashboard/flight-refresh";
+import { refreshAnywhereSeason, refreshFlightState } from "@/lib/dashboard/flight-refresh";
 import { readSchedulePhotoState, writeSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 
 export type SchedulePhotoUploadState = { error: string | null };
@@ -33,6 +33,12 @@ export async function uploadSchedulePhoto(
 
 export async function refreshFlights() {
   await refreshFlightState();
+  revalidatePath("/personal");
+}
+
+export async function setAnywhereSeason(formData: FormData) {
+  const season = formData.get("season");
+  await refreshAnywhereSeason(typeof season === "string" ? season : "");
   revalidatePath("/personal");
 }
 

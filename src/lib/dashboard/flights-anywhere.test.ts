@@ -112,7 +112,7 @@ test("groups each break's explore results with its California fifth slot", async
     }] }), { status: 200 });
   });
 
-  const result = await getAnywhereDashboard();
+  const result = await getAnywhereDashboard([schoolBreaks[0]]);
 
   expect(result.status).toBe("ok");
   if (result.status !== "ok") throw new Error(result.message);
@@ -121,4 +121,12 @@ test("groups each break's explore results with its California fifth slot", async
   expect(result.value.every(({ options }) => options.length === 2)).toBe(true);
   expect(result.value.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
   expect(fetchMock).toHaveBeenCalledTimes(1 + 3 * buildFlexCandidates(schoolBreaks[0]).length);
+});
+
+test("returns no sections without fetching when no windows are selected", async () => {
+  process.env.SERP_API_KEY = "test-key";
+  const fetchMock = vi.spyOn(global, "fetch");
+
+  await expect(getAnywhereDashboard([])).resolves.toEqual({ status: "ok", value: [] });
+  expect(fetchMock).not.toHaveBeenCalled();
 });

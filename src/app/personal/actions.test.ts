@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   readSchedulePhotoState: vi.fn(),
   writeSchedulePhotoState: vi.fn(),
   refreshFlightState: vi.fn(),
+  refreshAnywhereSeason: vi.fn(),
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
 }));
@@ -22,6 +23,7 @@ vi.mock("@/lib/dashboard/schedule-photo-store", () => ({
 
 vi.mock("@/lib/dashboard/flight-refresh", () => ({
   refreshFlightState: mocks.refreshFlightState,
+  refreshAnywhereSeason: mocks.refreshAnywhereSeason,
 }));
 
 vi.mock("next/cache", () => ({
@@ -29,7 +31,7 @@ vi.mock("next/cache", () => ({
   revalidateTag: mocks.revalidateTag,
 }));
 
-import { uploadSchedulePhoto } from "./actions";
+import { setAnywhereSeason, uploadSchedulePhoto } from "./actions";
 
 const originalKvUrl = process.env.KV_REST_API_URL;
 const originalBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -132,4 +134,14 @@ test("keeps the first uploaded photo without deleting a nonexistent previous blo
     uploadedAt: expect.any(String),
   });
   expect(mocks.del).not.toHaveBeenCalled();
+});
+
+test("refreshes only the submitted anywhere season and revalidates the personal page", async () => {
+  const formData = new FormData();
+  formData.set("season", "Winter Break");
+
+  await setAnywhereSeason(formData);
+
+  expect(mocks.refreshAnywhereSeason).toHaveBeenCalledWith("Winter Break");
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
 });

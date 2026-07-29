@@ -20,6 +20,11 @@ export function windowsInBookingRange(now: Date, windows: FareWindow[]): FareWin
   return windows.filter(({ departureDate }) => departureDate > today && departureDate < cutoff);
 }
 
+export function nearestUpcomingWindow(now: Date, windows: FareWindow[]): FareWindow {
+  const today = now.toISOString().slice(0, 10);
+  return windows.find(({ departureDate }) => departureDate > today) ?? windows.at(-1)!;
+}
+
 export function subtractMonths(dateString: string, months: number) {
   const date = new Date(`${dateString}T00:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() - months);
@@ -29,4 +34,9 @@ export function subtractMonths(dateString: string, months: number) {
 export function isWithinLookaheadWindow(now: Date, departureDate: string, months: number) {
   const today = now.toISOString().slice(0, 10);
   return today >= subtractMonths(departureDate, months) && today < departureDate;
+}
+
+export function nextSerpApiReset(now: Date, day: number) {
+  const monthOffset = now.getUTCDate() > day ? 1 : 0;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthOffset, day)).toISOString().slice(0, 10);
 }

@@ -5,12 +5,13 @@ import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
 import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
 import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
-import { fareSearch } from "@/lib/dashboard/config";
-import { isWithinLookaheadWindow, subtractMonths } from "@/lib/dashboard/flex-dates";
+import { fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
 import { RandomInsightCard } from "@/components/RandomInsightCard";
 import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
+import { SeasonSelect } from "@/components/SeasonSelect";
 import insights from "@/lib/dashboard/insights.generated.json";
 import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
@@ -43,6 +44,7 @@ export default async function PersonalPage() {
   ]);
   const flights = flightState?.flights ?? [];
   const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
+  const currentSeason = flightState?.anywhereSeasonLabel ?? nearestUpcomingWindow(now, schoolBreaks).label;
   const stockAnalysis = stock.status === "ok"
     ? await getStockAnalysis(stock.value, stockHeadlines.status === "ok" ? stockHeadlines.value : [])
     : null;
@@ -158,6 +160,7 @@ export default async function PersonalPage() {
         </div>
       </section>
 
+      <SeasonSelect seasons={schoolBreaks.map(({ label }) => label)} currentSeason={currentSeason} />
       <section aria-labelledby="anywhere-heading">
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
@@ -190,7 +193,7 @@ export default async function PersonalPage() {
                 ))}
               </div>
             ) : <p className="text-sm text-muted">No nearby flights found for the school breaks.</p>
-          ) : <p className="text-sm text-muted">{anywhere.message}.</p>}
+          ) : <p className="text-sm text-muted">{anywhere.message}. SerpApi resets {nextSerpApiReset(now, serpApiRenewalDay)}.</p>}
         </section>
       </section>
 

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, fareSearch, flightRoutes, newsSources, schoolBreaks } from "./config";
+import { californiaAirports, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -35,4 +35,8 @@ test("configures the fixed Summer 2027 fare search", () => {
     adults: 1,
     cabin: "ECONOMY",
   });
+});
+
+test("configures the monthly SerpApi renewal day", () => {
+  expect(serpApiRenewalDay).toBe(16);
 });
