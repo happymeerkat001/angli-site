@@ -1,9 +1,11 @@
 "use server";
 
 import { del, put } from "@vercel/blob";
-import { revalidatePath, revalidateTag } from "next/cache";
+import { revalidatePath } from "next/cache";
 import { refreshAnywhereSeason, refreshFlightState } from "@/lib/dashboard/flight-refresh";
+import { refreshNewsState } from "@/lib/dashboard/news-refresh";
 import { readSchedulePhotoState, writeSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
+import { refreshStockState } from "@/lib/dashboard/stock-refresh";
 
 export type SchedulePhotoUploadState = { error: string | null };
 
@@ -43,9 +45,11 @@ export async function setAnywhereSeason(formData: FormData) {
 }
 
 export async function refreshStockAnalysis() {
-  revalidateTag("stock-analysis");
+  await refreshStockState();
+  revalidatePath("/personal");
 }
 
 export async function refreshNews() {
-  revalidateTag("news");
+  await refreshNewsState();
+  revalidatePath("/personal");
 }

@@ -1,10 +1,9 @@
 import { CalendarDays, Lightbulb, Newspaper, Plane, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
 import { readFlightState } from "@/lib/dashboard/flight-store";
+import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
-import { getNewsDashboard, mixNewsItems } from "@/lib/dashboard/news";
-import { getStockAnalysis } from "@/lib/dashboard/stock-analysis";
-import { getStockHeadlines, getStockSnapshot } from "@/lib/dashboard/stock";
+import { readStockState } from "@/lib/dashboard/stock-store";
 import { fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
@@ -35,23 +34,20 @@ export default async function PersonalPage() {
   const now = new Date();
   const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
   const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
-  const [agenda, flightState, schedulePhotoState, news, stock, stockHeadlines] = await Promise.all([
+  const [agenda, flightState, schedulePhotoState, newsState, stockState] = await Promise.all([
     getCalendarAgenda(),
     readFlightState(),
     readSchedulePhotoState(),
-    getNewsDashboard(),
-    getStockSnapshot(),
-    getStockHeadlines(),
+    readNewsState(),
+    readStockState(),
   ]);
   const flights = flightState?.flights ?? [];
   const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
   const currentSeason = flightState?.anywhereSeasonLabel ?? nearestUpcomingWindow(now, schoolBreaks).label;
-  const stockAnalysis = stock.status === "ok"
-    ? await getStockAnalysis(stock.value, stockHeadlines.status === "ok" ? stockHeadlines.value : [])
-    : null;
-  const headlines = mixNewsItems(
-    Object.values(news).flatMap((result) => result.status === "ok" ? result.value : []),
-  );
+  const headlines = newsState?.headlines ?? [];
+  const stock = stockState?.snapshot ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
+  const stockHeadlines = stockState?.headlines ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
+  const stockAnalysis = stockState?.analysis ?? null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-12">
@@ -96,7 +92,7 @@ export default async function PersonalPage() {
                 </li>
               ))}
             </ul>
-          ) : <p className="text-sm text-muted">News temporarily unavailable.</p>}
+          ) : <p className="text-sm text-muted">{newsState ? "News temporarily unavailable." : "Not yet loaded — press Refresh headlines."}</p>}
         </section>
       </section>
 
