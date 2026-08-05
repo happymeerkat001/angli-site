@@ -1,107 +1,164 @@
 [
   {
-    "id": "05-02-22-expert-feedback-1",
-    "noteTitle": "05.02.22 Expert Feedback",
-    "insightText": "Build the backbone from the largest, most important chunks first. Show how those concepts relate through cause and effect, then explain what each concept is, where it fits, and how it works."
-  },
-  {
-    "id": "logic-layer-1",
-    "noteTitle": "Logic Layer",
-    "insightText": "A logic layer is the broad backbone of a mind map: identify the major concepts, determine how they relate, and group them into intuitive, importance-based chunks before expanding the rest of the map."
-  },
-  {
-    "id": "framing-bias-1",
-    "noteTitle": "framing bias",
-    "insightText": "It seems that the way you have organised and chunked your information has been heavily dictated by how the textbook or teacher represented the information to you. This is a form of \"framing bias\" where the way information is presented to us influences our judgements and perspectives on it afterwards. It is important to acknowledge framing bias tendencies as they are biologically programmed into our human brains and are largely unavoidable without using conscious systems to override them. To improve your work, make sure to follow a clear and systematic process of chunking, starting with using good inquiry to explore relationships, and making sure you only chunk when similarities and trends between relationships and concepts have been found through your inquiry. If the way you are chunking is very similar to the headings and sections provided for you, be wary of whether you have followed this process strictly. It's easy to let framing bias affect us if we aren't careful, especially when the information starts getting very technical and detailed and it feels like no other way could possibly make sense. You'd be surprised how independent chunking can simplify even very technical information!"
-  },
-  {
-    "id": "ultraspeaking-purpose-1",
-    "noteTitle": "Ultraspeaking Purpose",
-    "insightText": "Peak Begin and End"
-  },
-  {
-    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-1",
-    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
-    "insightText": "He predicts that human work shifts upward from writing each line toward requirements, architecture, risk control, evaluation, and improving the agent environment."
-  },
-  {
-    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-2",
-    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
-    "insightText": "The durable idea is to build a learning-and-verification loop, not a dependency on a fashionable AI coding tool. AI can amplify output, but unexamined output amplifies failure too. The valuable operator identifies the highest-leverage problem, delegates with clear guardrails, measures the result, and codifies what was learned so the next cycle is safer and faster."
-  },
-  {
+    "kind": "text",
     "id": "andee-tao-architecture-1",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "To avoid overwhelm, it was advised to narrow focus and deep dive into one component (e.g., Redis) by building with it and testing operations like get, post, and delete."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-2",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Understanding architecture comes through hands-on experimentation and recognizing limitations of chosen solutions in real use cases."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-3",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "It was suggested that Ang manually identify problems in his codebase before using [[Artificial Intelligence]] to solve them, to improve system comprehension and debugging skills."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-4",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "The discussion included the importance of modular design to allow future replacement of components."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-5",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "A suggestion was made to **deep dive into one component at a time**—e.g., Redis—by building with it, testing operations (get, post, delete), and observing behavior."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-6",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "The value of manually identifying issues before using [[Artificial Intelligence]] to solve them was emphasized to improve diagnostic and architectural reasoning skills."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-7",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Choose one architectural component (e.g., Redis) and conduct a focused deep dive by building and testing it in a controlled environment."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-8",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Manually identify one problem in the current project (e.g., file location, connection failure) before using [[Artificial Intelligence]] to solve it."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-9",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Document architectural decisions in a structured way—e.g., pros and cons of each component in the four categories."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-10",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "**Architecture should be learned incrementally**, one component or category at a time, rather than holistically."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-11",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Hands-on experimentation is more valuable than theoretical study** for practical understanding."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-12",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "**[[Artificial Intelligence]] should assist, not replace**, the decision-making and diagnostic process in architecture."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-13",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Ang Li will experiment with Redis by running CRUD operations and observing performance in different scenarios."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-14",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Focus on improving system understanding by isolating and solving one technical problem manually each week."
   },
   {
+    "kind": "text",
     "id": "andee-tao-architecture-15",
     "noteTitle": "Andee Tao Architecture",
     "insightText": "Continue iterating on the dashboard project while gradually deepening architectural knowledge."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-1",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "Discussed how a local database on a device synchronizes with a remote server, using Gmail as an example: data is pulled from Google’s servers and stored locally for offline access."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-2",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "Noted that reading code is non-linear and requires identifying key patterns such as inputs, outputs, and function signatures."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-3",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "A key focus was on the purpose and function of imports and exports in .ts files, explaining that exports make functions or classes available to other modules, while imports bring in external dependencies, forming the basis of modular architecture and preventing naming conflicts."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-4",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "The architecture was likened to a team of agents or a factory assembly line, where each file or function has a specific responsibility and passes data to the next, reinforcing the principle of separation of responsibilities in large systems with thousands of lines of code."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-5",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "The data flow from source (e.g., API ingestion) through processing layers to final output (e.g., Firebase Hosting) was mapped conceptually, helping visualize how components connect and where transformations occur, even though the LLM and logger components are currently isolated."
+  },
+  {
+    "kind": "text",
+    "id": "andee-understanding-code-structure-and-flow-6",
+    "noteTitle": "Andee: Understanding Code Structure and Flow",
+    "insightText": "TypeScript interfaces like 'digest item' were highlighted as contracts that define expected properties, enabling better tooling support (e.g., autocomplete) and ensuring consistency when data is passed between modules or consumed by other developers."
+  },
+  {
+    "kind": "text",
+    "id": "05-02-22-expert-feedback-1",
+    "noteTitle": "05.02.22 Expert Feedback",
+    "insightText": "Build the backbone from the largest, most important chunks first. Show how those concepts relate through cause and effect, then explain what each concept is, where it fits, and how it works."
+  },
+  {
+    "kind": "text",
+    "id": "logic-layer-1",
+    "noteTitle": "Logic Layer",
+    "insightText": "A logic layer is the broad backbone of a mind map: identify the major concepts, determine how they relate, and group them into intuitive, importance-based chunks before expanding the rest of the map."
+  },
+  {
+    "kind": "text",
+    "id": "framing-bias-1",
+    "noteTitle": "framing bias",
+    "insightText": "It seems that the way you have organised and chunked your information has been heavily dictated by how the textbook or teacher represented the information to you. This is a form of \"framing bias\" where the way information is presented to us influences our judgements and perspectives on it afterwards. It is important to acknowledge framing bias tendencies as they are biologically programmed into our human brains and are largely unavoidable without using conscious systems to override them. To improve your work, make sure to follow a clear and systematic process of chunking, starting with using good inquiry to explore relationships, and making sure you only chunk when similarities and trends between relationships and concepts have been found through your inquiry. If the way you are chunking is very similar to the headings and sections provided for you, be wary of whether you have followed this process strictly. It's easy to let framing bias affect us if we aren't careful, especially when the information starts getting very technical and detailed and it feels like no other way could possibly make sense. You'd be surprised how independent chunking can simplify even very technical information!"
+  },
+  {
+    "kind": "text",
+    "id": "ultraspeaking-purpose-1",
+    "noteTitle": "Ultraspeaking Purpose",
+    "insightText": "Peak Begin and End"
+  },
+  {
+    "kind": "text",
+    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-1",
+    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
+    "insightText": "He predicts that human work shifts upward from writing each line toward requirements, architecture, risk control, evaluation, and improving the agent environment."
+  },
+  {
+    "kind": "text",
+    "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-2",
+    "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
+    "insightText": "The durable idea is to build a learning-and-verification loop, not a dependency on a fashionable AI coding tool. AI can amplify output, but unexamined output amplifies failure too. The valuable operator identifies the highest-leverage problem, delegates with clear guardrails, measures the result, and codifies what was learned so the next cycle is safer and faster."
   }
 ]

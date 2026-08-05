@@ -18,8 +18,16 @@ export function splitNoteSections(markdown: string) {
   return { title, scannableText };
 }
 
+export function parseImageHighlight(value: string) {
+  const match = value.match(/^\s*!\[([^\]]*)\]\((https:\/\/i\.imgur\.com\/[^\s)]+)\)\s*([\s\S]*)$/);
+  if (!match) return null;
+  const [, altText, imageUrl, trailingText] = match;
+  return { imageUrl, caption: trailingText.trim() || altText.trim() };
+}
+
 export function extractHighlights(text: string) {
   return [...text.matchAll(/(?<![=])==([^=][\s\S]*?)==/g)].map((match) => match[1].trim()).filter((value) => {
+    if (parseImageHighlight(value)) return true;
     const nonEmptyLines = value.split(/\r?\n/).filter((line) => line.trim());
     return value && !/^=+$/.test(value) && value.split(/\s+/).length >= 4 && !value.includes("```") && (value.match(/[`{};]/g)?.length ?? 0) / value.length <= 0.5 && nonEmptyLines.filter((line) => /^\s{2,}/.test(line)).length / nonEmptyLines.length < 0.5;
   });
@@ -28,7 +36,13 @@ export function extractHighlights(text: string) {
 export function extractInsightsFromNote(markdown: string, noteTitle?: string): InsightEntry[] {
   const split = splitNoteSections(markdown);
   const title = noteTitle || split.title;
-  return extractHighlights(split.scannableText).map((insightText, index) => ({ id: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${index + 1}`, noteTitle: title, insightText }));
+  return extractHighlights(split.scannableText).map((value, index) => {
+    const id = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${index + 1}`;
+    const image = parseImageHighlight(value);
+    return image
+      ? { kind: "image" as const, id, noteTitle: title, ...image }
+      : { kind: "text" as const, id, noteTitle: title, insightText: value };
+  });
 }
 
 export function selectRandomInsight(pool: InsightEntry[], seenIds: Set<string>, random = Math.random) {

@@ -13,6 +13,7 @@ import { RandomInsightCard } from "@/components/RandomInsightCard";
 import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
 import { SeasonSelect } from "@/components/SeasonSelect";
 import insights from "@/lib/dashboard/insights.generated.json";
+import type { InsightEntry } from "@/lib/dashboard/types";
 import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -71,7 +72,7 @@ export default async function PersonalPage() {
 
       <section className="rounded-[2rem] border border-line bg-card p-7 shadow-sm shadow-ink/5" aria-labelledby="insight-heading">
         <div className="mb-4 flex items-center gap-3"><Lightbulb className="text-accent" aria-hidden="true" /><h2 id="insight-heading" className="font-serif text-2xl font-semibold text-ink">Insight reminder</h2></div>
-        <RandomInsightCard insights={insights} />
+        <RandomInsightCard insights={insights as InsightEntry[]} />
       </section>
 
       <section aria-labelledby="news-heading">

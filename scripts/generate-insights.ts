@@ -18,9 +18,10 @@ async function main() {
     if (!extracted.length) console.log(`0 insights found in ${relative(vaultRoot, file)}`);
     insights.push(...extracted);
   }
-  for (const insight of insights) if (/http/i.test(insight.insightText) || insight.insightText.length > 400) console.warn(`Review insight: ${insight.id}`);
+  for (const insight of insights) if (insight.kind === "text" && (/http/i.test(insight.insightText) || insight.insightText.length > 400)) console.warn(`Review insight: ${insight.id}`);
   await writeFile(resolve("src/lib/dashboard/insights.generated.json"), `${JSON.stringify(insights, null, 2)}\n`);
-  console.log(`${files.length} files scanned; ${insights.length} insights extracted`);
+  const imageCount = insights.filter((insight) => insight.kind === "image").length;
+  console.log(`${files.length} files scanned; ${insights.length} insights extracted (${insights.length - imageCount} text, ${imageCount} image)`);
 }
 
 void main();

@@ -104,8 +104,19 @@ export type AnywhereWindowSection = {
   options: AnywhereFlightOption[];
 };
 
-export type InsightEntry = {
+export type TextInsightEntry = {
+  kind: "text";
   id: string;
   noteTitle: string;
   insightText: string;
 };
+
+export type ImageInsightEntry = {
+  kind: "image";
+  id: string;
+  noteTitle: string;
+  imageUrl: string;
+  caption: string;
+};
+
+export type InsightEntry = TextInsightEntry | ImageInsightEntry;
