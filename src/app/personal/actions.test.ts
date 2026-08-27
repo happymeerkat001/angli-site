@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   writeSchedulePhotoState: vi.fn(),
   refreshFlightState: vi.fn(),
   refreshAnywhereSeason: vi.fn(),
+  refreshPointsSeason: vi.fn(),
+  refreshFrontierSeason: vi.fn(),
   refreshNewsState: vi.fn(),
   refreshStockState: vi.fn(),
   revalidatePath: vi.fn(),
@@ -26,6 +28,8 @@ vi.mock("@/lib/dashboard/schedule-photo-store", () => ({
 vi.mock("@/lib/dashboard/flight-refresh", () => ({
   refreshFlightState: mocks.refreshFlightState,
   refreshAnywhereSeason: mocks.refreshAnywhereSeason,
+  refreshPointsSeason: mocks.refreshPointsSeason,
+  refreshFrontierSeason: mocks.refreshFrontierSeason,
 }));
 
 vi.mock("@/lib/dashboard/news-refresh", () => ({ refreshNewsState: mocks.refreshNewsState }));
@@ -36,7 +40,7 @@ vi.mock("next/cache", () => ({
   revalidateTag: mocks.revalidateTag,
 }));
 
-import { refreshNews, refreshStockAnalysis, setAnywhereSeason, uploadSchedulePhoto } from "./actions";
+import { refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis, setAnywhereSeason, uploadSchedulePhoto } from "./actions";
 
 const originalKvUrl = process.env.KV_REST_API_URL;
 const originalBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -148,6 +152,20 @@ test("refreshes only the submitted anywhere season and revalidates the personal 
   await setAnywhereSeason(formData);
 
   expect(mocks.refreshAnywhereSeason).toHaveBeenCalledWith("Winter Break");
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
+});
+
+test("refreshes points and revalidates the personal page", async () => {
+  await refreshPoints();
+
+  expect(mocks.refreshPointsSeason).toHaveBeenCalledOnce();
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
+});
+
+test("refreshes Frontier and revalidates the personal page", async () => {
+  await refreshFrontier();
+
+  expect(mocks.refreshFrontierSeason).toHaveBeenCalledOnce();
   expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
 });
 

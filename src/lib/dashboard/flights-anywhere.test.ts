@@ -2,7 +2,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import { schoolBreaks } from "./config";
 import { buildFlexCandidates } from "./flex-dates";
 import type { FlightSnapshot } from "./types";
-import { getAnywhereDashboard, serpApiExploreUrl, selectCaliforniaFaresByWindow, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
+import { getAnywhereDashboard, selectAnywherePile, serpApiExploreUrl, selectCaliforniaFaresByWindow, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
 
 const originalSerpApiKey = process.env.SERP_API_KEY;
 
@@ -13,20 +13,28 @@ afterEach(() => {
   else delete process.env.SERP_API_KEY;
 });
 
-test("filters, ranks, and caps nearby anywhere-flight results", () => {
-  const results = selectTopAnywhereFlights([
-    { name: "Slow City", destination_airport: { code: "SLO" }, flight_price: 100, flight_duration: 361, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Missing price", destination_airport: { code: "MIS" }, flight_duration: 100, number_of_stops: 0 },
-    { name: "Austin", destination_airport: { code: "AUS" }, flight_price: 150, flight_duration: 60, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Denver", destination_airport: { code: "DEN" }, flight_price: 90, flight_duration: 120, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Chicago", destination_airport: { code: "ORD" }, flight_price: 130, flight_duration: 150, number_of_stops: 1, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Houston", destination_airport: { code: "IAH" }, flight_price: 80, flight_duration: 70, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Nashville", destination_airport: { code: "BNA" }, flight_price: 120, flight_duration: 100, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-    { name: "Kansas City", destination_airport: { code: "MCI" }, flight_price: 110, flight_duration: 90, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
-  ], "Spring Break");
+const exploreDestinations = [
+  { name: "Slow City", destination_airport: { code: "SLO" }, flight_price: 100, flight_duration: 361, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Missing price", destination_airport: { code: "MIS" }, flight_duration: 100, number_of_stops: 0 },
+  { name: "Austin", destination_airport: { code: "AUS" }, flight_price: 150, flight_duration: 60, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Denver", destination_airport: { code: "DEN" }, flight_price: 90, flight_duration: 120, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Chicago", destination_airport: { code: "ORD" }, flight_price: 130, flight_duration: 150, number_of_stops: 1, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Houston", destination_airport: { code: "IAH" }, flight_price: 80, flight_duration: 70, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Nashville", destination_airport: { code: "BNA" }, flight_price: 120, flight_duration: 100, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+  { name: "Kansas City", destination_airport: { code: "MCI" }, flight_price: 110, flight_duration: 90, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+];
 
-  expect(results.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "MCI", "BNA"]);
-  expect(results.every(({ durationMinutes }) => durationMinutes <= 360)).toBe(true);
+test("ranks and caps anywhere-flight results without a duration cap", () => {
+  const results = selectTopAnywhereFlights(exploreDestinations, "Spring Break");
+
+  expect(results.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "SLO", "MCI"]);
+  expect(results.some(({ durationMinutes }) => durationMinutes > 360)).toBe(true);
+});
+
+test("keeps a wider explore pile than the displayed cash row", () => {
+  const pile = selectAnywherePile(exploreDestinations, "Spring Break");
+
+  expect(pile.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "SLO", "MCI", "BNA", "ORD", "AUS"]);
 });
 
 test("selects the cheapest California fare within each school break", () => {
@@ -116,10 +124,11 @@ test("groups each break's explore results with its California fifth slot", async
 
   expect(result.status).toBe("ok");
   if (result.status !== "ok") throw new Error(result.message);
-  expect(result.value.map(({ windowLabel }) => windowLabel)).toEqual(["Fall Break"]);
-  expect(result.value[0]).toMatchObject({ departureDate: "2026-10-10", returnDate: "2026-10-13" });
-  expect(result.value.every(({ options }) => options.length === 2)).toBe(true);
-  expect(result.value.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
+  expect(result.value.sections.map(({ windowLabel }) => windowLabel)).toEqual(["Fall Break"]);
+  expect(result.value.sections[0]).toMatchObject({ departureDate: "2026-10-10", returnDate: "2026-10-13" });
+  expect(result.value.sections.every(({ options }) => options.length === 2)).toBe(true);
+  expect(result.value.sections.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
+  expect(result.value.pile.map(({ airportCode }) => airportCode)).toEqual(["EXP"]);
   expect(fetchMock).toHaveBeenCalledTimes(1 + 3 * buildFlexCandidates(schoolBreaks[0]).length);
 });
 
@@ -127,6 +136,6 @@ test("returns no sections without fetching when no windows are selected", async 
   process.env.SERP_API_KEY = "test-key";
   const fetchMock = vi.spyOn(global, "fetch");
 
-  await expect(getAnywhereDashboard([])).resolves.toEqual({ status: "ok", value: [] });
+  await expect(getAnywhereDashboard([])).resolves.toEqual({ status: "ok", value: { sections: [], pile: [] } });
   expect(fetchMock).not.toHaveBeenCalled();
 });

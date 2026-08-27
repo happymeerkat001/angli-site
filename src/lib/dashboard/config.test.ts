@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
+import { californiaAirports, fareSearch, flightRoutes, newsSources, partnerHubAirports, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -39,4 +39,8 @@ test("configures the fixed Summer 2027 fare search", () => {
 
 test("configures the monthly SerpApi renewal day", () => {
   expect(serpApiRenewalDay).toBe(16);
+});
+
+test("lists Chase and Amex partner hubs used for points ranking", () => {
+  expect(partnerHubAirports).toEqual(expect.arrayContaining(["ORD", "DEN", "ATL", "CDG", "LHR", "YYZ"]));
 });

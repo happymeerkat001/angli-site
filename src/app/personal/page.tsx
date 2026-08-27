@@ -13,7 +13,7 @@ import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
 import { SeasonSelect } from "@/components/SeasonSelect";
 import insights from "@/lib/dashboard/insights.generated.json";
 import type { InsightEntry } from "@/lib/dashboard/types";
-import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
+import { refreshFlights, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +26,15 @@ function durationLabel(durationMinutes: number) {
   const hours = Math.floor(durationMinutes / 60);
   const minutes = durationMinutes % 60;
   return minutes ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
+function chicagoStamp(value: string) {
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(value));
+}
+
+function staleBanner(rowSeason: string, selectedSeason: string) {
+  if (!rowSeason || rowSeason === selectedSeason) return null;
+  return `Showing ${rowSeason} — refresh for ${selectedSeason}`;
 }
 
 const googleFlightsUrl = "https://www.google.com/travel/flights";
@@ -44,6 +53,10 @@ export default async function PersonalPage() {
   const flights = flightState?.flights ?? [];
   const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
   const currentSeason = flightState?.anywhereSeasonLabel ?? nearestUpcomingWindow(now, schoolBreaks).label;
+  const points = flightState?.points ?? { status: "error" as const, message: "Not yet loaded — press Refresh points" };
+  const frontier = flightState?.frontier ?? { status: "error" as const, message: "Not yet loaded — press Refresh Frontier" };
+  const pointsBanner = staleBanner(flightState?.pointsSeasonLabel ?? "", currentSeason);
+  const frontierBanner = staleBanner(flightState?.frontierSeasonLabel ?? "", currentSeason);
   const headlines = newsState?.headlines ?? [];
   const stock = stockState?.snapshot ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
   const stockHeadlines = stockState?.headlines ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
@@ -163,7 +176,7 @@ export default async function PersonalPage() {
           <Plane className="text-accent" aria-hidden="true" />
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
-            <h2 id="anywhere-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest flights anywhere (≤6h)</h2>
+            <h2 id="anywhere-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Cheapest flights anywhere</h2>
           </div>
         </div>
         <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
@@ -191,6 +204,68 @@ export default async function PersonalPage() {
               </div>
             ) : <p className="text-sm text-muted">No nearby flights found for the school breaks.</p>
           ) : <p className="text-sm text-muted">{anywhere.message}. SerpApi resets {nextSerpApiReset(now, serpApiRenewalDay)}.</p>}
+        </section>
+      </section>
+
+      <section aria-labelledby="points-heading">
+        <form action={refreshPoints} className="mb-4"><RefreshButton label="Refresh points" /></form>
+        {flightState?.pointsFetchedAt ? <p className="mb-4 text-sm text-muted">Last refreshed: {chicagoStamp(flightState.pointsFetchedAt)}</p> : <p className="mb-4 text-sm text-muted">Not yet refreshed</p>}
+        <div className="mb-6 flex items-center gap-3">
+          <Plane className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult</p>
+            <h2 id="points-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Best points value</h2>
+          </div>
+        </div>
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {pointsBanner ? <p className="mb-4 text-sm font-medium text-red-700">{pointsBanner}</p> : null}
+          {points.status === "ok" ? (
+            points.value.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                {points.value.map((flight) => (
+                  <section key={`${flight.airportCode}-${flight.departureDate}-${flight.returnDate}`} className="rounded-[1.5rem] border border-line p-5">
+                    <p className="text-sm font-semibold text-accent">{flight.airportCode}</p>
+                    <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
+                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} · {flight.points.toLocaleString()} {flight.program} points</p>
+                    <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
+                    <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                  </section>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted">No strong points deals found for this break.</p>
+          ) : <p className="text-sm text-muted">{points.message}.</p>}
+        </section>
+      </section>
+
+      <section aria-labelledby="frontier-heading">
+        <form action={refreshFrontier} className="mb-4"><RefreshButton label="Refresh Frontier" /></form>
+        {flightState?.frontierFetchedAt ? <p className="mb-4 text-sm text-muted">Last refreshed: {chicagoStamp(flightState.frontierFetchedAt)}</p> : <p className="mb-4 text-sm text-muted">Not yet refreshed</p>}
+        <div className="mb-6 flex items-center gap-3">
+          <Plane className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Dallas · Frontier deals</p>
+            <h2 id="frontier-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Frontier from Dallas</h2>
+          </div>
+        </div>
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {frontierBanner ? <p className="mb-4 text-sm font-medium text-red-700">{frontierBanner}</p> : null}
+          {frontier.status === "ok" ? (
+            frontier.value.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                {frontier.value.map((flight) => (
+                  <section key={`${flight.origin}-${flight.airportCode}-${flight.departureDate}-${flight.amount}`} className="rounded-[1.5rem] border border-line p-5">
+                    <p className="text-sm font-semibold text-accent">{flight.origin} → {flight.airportCode}</p>
+                    <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
+                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} {flight.tripType === "one-way" ? "one-way" : "round trip"}</p>
+                    {flight.durationMinutes !== null && flight.stops !== null ? (
+                      <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
+                    ) : null}
+                    <p className="mt-2 text-sm text-muted">{flight.returnDate ? `${flight.departureDate} – ${flight.returnDate}` : flight.departureDate}</p>
+                  </section>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted">No Frontier Dallas deals overlap this break.</p>
+          ) : <p className="text-sm text-muted">{frontier.message}.</p>}
         </section>
       </section>
 

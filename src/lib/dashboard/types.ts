@@ -104,6 +104,34 @@ export type AnywhereWindowSection = {
   options: AnywhereFlightOption[];
 };
 
+export type AnywhereDashboardValue = {
+  sections: AnywhereWindowSection[];
+  pile: AnywhereFlightOption[];
+};
+
+export type PointsProgram = "Chase" | "Amex";
+
+export type PointsFlightOption = AnywhereFlightOption & {
+  program: PointsProgram;
+  points: number;
+};
+
+export type FrontierTripType = "one-way" | "round-trip";
+
+export type FrontierDealOption = {
+  origin: string;
+  destination: string;
+  airportCode: string;
+  amount: number;
+  currency: "USD";
+  durationMinutes: number | null;
+  stops: number | null;
+  departureDate: string;
+  returnDate: string | null;
+  tripType: FrontierTripType;
+  windowLabel: string;
+};
+
 export type TextInsightEntry = {
   kind: "text";
   id: string;

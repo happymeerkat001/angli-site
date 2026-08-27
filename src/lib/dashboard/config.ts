@@ -58,6 +58,15 @@ export const californiaAirports: CaliforniaAirport[] = [
 
 export const serpApiRenewalDay = 16;
 
+export const partnerHubAirports = [
+  "AMS", "ATL", "BOS", "BOG", "BWI", "CDG", "DAL", "DEN", "DTW", "EWR",
+  "FLL", "HND", "HOU", "IAD", "IAH", "JFK", "LAS", "LAX", "LGA", "LHR",
+  "MDW", "MCO", "MSP", "NRT", "ORD", "PHX", "SEA", "SFO", "SLC", "YVR", "YYZ",
+] as const;
+
+export const FRONTIER_DEALS_URL = "https://flights.flyfrontier.com/en/flight-deals";
+export const frontierDallasOrigins = ["DFW", "DAL"] as const;
+
 export const fareSearch = {
   departureDate: "2027-06-18",
   returnDate: "2027-07-09",

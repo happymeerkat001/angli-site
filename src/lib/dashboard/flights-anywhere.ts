@@ -1,6 +1,6 @@
 import { californiaAirports, schoolBreaks } from "./config";
 import { getFlexFlightSnapshot } from "./flights";
-import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow, FlightSnapshot, SourceResult } from "./types";
+import type { AnywhereDashboardValue, AnywhereFlightOption, FareWindow, FlightSnapshot, SourceResult } from "./types";
 
 type SerpExploreDestination = {
   name?: unknown;
@@ -30,44 +30,56 @@ export function serpApiExploreUrl(window: FareWindow, apiKey: string) {
   return `https://serpapi.com/search.json?${params.toString()}`;
 }
 
+function mapExploreDestinations(destinations: SerpExploreDestination[], windowLabel: string): AnywhereFlightOption[] {
+  return destinations.flatMap((destination) => {
+    const amount = typeof destination.flight_price === "number" ? destination.flight_price : null;
+    const durationMinutes = typeof destination.flight_duration === "number" ? destination.flight_duration : null;
+    const stops = typeof destination.number_of_stops === "number" ? destination.number_of_stops : null;
+    const name = typeof destination.name === "string" ? destination.name : null;
+    const airportCode = typeof destination.destination_airport?.code === "string"
+      ? destination.destination_airport.code
+      : null;
+    const departureDate = typeof destination.start_date === "string" ? destination.start_date : null;
+    const returnDate = typeof destination.end_date === "string" ? destination.end_date : null;
+
+    if (amount === null || durationMinutes === null || stops === null || !name || !airportCode || !departureDate || !returnDate) {
+      return [];
+    }
+
+    return [{
+      destination: name,
+      airportCode,
+      amount,
+      currency: "USD" as const,
+      durationMinutes,
+      stops,
+      departureDate,
+      returnDate,
+      windowLabel,
+    }];
+  });
+}
+
+function uniqueCheapestByAirport(options: AnywhereFlightOption[], limit: number): AnywhereFlightOption[] {
+  const ranked = [...options].sort((a, b) => a.amount - b.amount);
+  const seen = new Set<string>();
+  return ranked.filter((option) => !seen.has(option.airportCode) && Boolean(seen.add(option.airportCode))).slice(0, limit);
+}
+
 export function selectTopAnywhereFlights(
   destinations: SerpExploreDestination[],
   windowLabel: string,
-  maxDurationMinutes = 360,
   limit = 4,
 ): AnywhereFlightOption[] {
-  const options = destinations
-    .flatMap((destination) => {
-      const amount = typeof destination.flight_price === "number" ? destination.flight_price : null;
-      const durationMinutes = typeof destination.flight_duration === "number" ? destination.flight_duration : null;
-      const stops = typeof destination.number_of_stops === "number" ? destination.number_of_stops : null;
-      const name = typeof destination.name === "string" ? destination.name : null;
-      const airportCode = typeof destination.destination_airport?.code === "string"
-        ? destination.destination_airport.code
-        : null;
-      const departureDate = typeof destination.start_date === "string" ? destination.start_date : null;
-      const returnDate = typeof destination.end_date === "string" ? destination.end_date : null;
+  return uniqueCheapestByAirport(mapExploreDestinations(destinations, windowLabel), limit);
+}
 
-      if (
-        amount === null || durationMinutes === null || stops === null || durationMinutes > maxDurationMinutes
-        || !name || !airportCode || !departureDate || !returnDate
-      ) return [];
-
-      return [{
-        destination: name,
-        airportCode,
-        amount,
-        currency: "USD" as const,
-        durationMinutes,
-        stops,
-        departureDate,
-        returnDate,
-        windowLabel,
-      }];
-    })
-    .sort((a, b) => a.amount - b.amount);
-  const seen = new Set<string>();
-  return options.filter((option) => !seen.has(option.airportCode) && Boolean(seen.add(option.airportCode))).slice(0, limit);
+export function selectAnywherePile(
+  destinations: SerpExploreDestination[],
+  windowLabel: string,
+  limit = 40,
+): AnywhereFlightOption[] {
+  return uniqueCheapestByAirport(mapExploreDestinations(destinations, windowLabel), limit);
 }
 
 type CaliforniaFareCandidate = {
@@ -120,8 +132,8 @@ async function getCaliforniaFaresByWindow(windows: FareWindow[]): Promise<Record
   return selectCaliforniaFaresByWindow(candidates);
 }
 
-export async function getAnywhereDashboard(windows: FareWindow[]): Promise<SourceResult<AnywhereWindowSection[]>> {
-  if (windows.length === 0) return { status: "ok", value: [] };
+export async function getAnywhereDashboard(windows: FareWindow[]): Promise<SourceResult<AnywhereDashboardValue>> {
+  if (windows.length === 0) return { status: "ok", value: { sections: [], pile: [] } };
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
 
@@ -130,10 +142,15 @@ export async function getAnywhereDashboard(windows: FareWindow[]): Promise<Sourc
       const response = await fetch(serpApiExploreUrl(window, apiKey), { signal: AbortSignal.timeout(15_000) });
       if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
       const data = await response.json() as SerpExploreResponse;
-      return { window, failed: false, options: selectTopAnywhereFlights(data.destinations ?? [], window.label) };
+      return {
+        window,
+        failed: false,
+        options: selectTopAnywhereFlights(data.destinations ?? [], window.label),
+        pile: selectAnywherePile(data.destinations ?? [], window.label),
+      };
     } catch (error) {
       console.error(`Flight explore unavailable for ${window.label}`, error);
-      return { window, failed: true, options: [] as AnywhereFlightOption[] };
+      return { window, failed: true, options: [] as AnywhereFlightOption[], pile: [] as AnywhereFlightOption[] };
     }
   }));
 
@@ -142,14 +159,18 @@ export async function getAnywhereDashboard(windows: FareWindow[]): Promise<Sourc
   }
 
   const californiaFares = await getCaliforniaFaresByWindow(windows);
+  const firstOk = results.find((result) => !result.failed);
 
   return {
     status: "ok",
-    value: results.map(({ window, options }) => ({
-      windowLabel: window.label,
-      departureDate: window.departureDate,
-      returnDate: window.returnDate,
-      options: californiaFares[window.label] ? [...options, californiaFares[window.label]] : options,
-    })),
+    value: {
+      sections: results.map(({ window, options }) => ({
+        windowLabel: window.label,
+        departureDate: window.departureDate,
+        returnDate: window.returnDate,
+        options: californiaFares[window.label] ? [...options, californiaFares[window.label]] : options,
+      })),
+      pile: firstOk?.pile ?? [],
+    },
   };
 }
