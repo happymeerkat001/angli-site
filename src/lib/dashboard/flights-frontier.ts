@@ -1,3 +1,4 @@
+import { FRONTIER_AIRLINE_IDENTITY } from "./airline-identity";
 import { FRONTIER_DEALS_URL, frontierDallasOrigins } from "./config";
 import type { FareWindow, FrontierDealOption, FrontierTripType, SourceResult } from "./types";
 
@@ -68,6 +69,7 @@ export function parseFrontierDealsHtml(html: string, window: FareWindow): Fronti
       returnDate,
       tripType,
       windowLabel: window.label,
+      airlineIdentity: FRONTIER_AIRLINE_IDENTITY,
     });
   }
 

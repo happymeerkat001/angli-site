@@ -17,7 +17,7 @@ function option(airportCode: string, amount: number, extra: Partial<AnywhereFlig
   };
 }
 
-test("converts cash to Chase points at 1.5 cents", () => {
+test("converts cash to Chase points at 1.5 cents for ranking only", () => {
   expect(pointsForCash(400, 1.5)).toBe(26667);
   expect(choosePointsProgram(400)).toEqual({ program: "Chase", points: 26667 });
 });

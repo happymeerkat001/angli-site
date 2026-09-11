@@ -1,6 +1,7 @@
+import { identityFromSerpFlightSegments } from "./airline-identity";
 import { fareSearch, flightRoutes } from "./config";
 import { buildFlexCandidates } from "./flex-dates";
-import type { FareWindow, FlightSearchRoute, FlightSnapshot } from "./types";
+import type { FareWindow, FlightAirlineIdentity, FlightSearchRoute, FlightSnapshot } from "./types";
 
 type SerpFlightOption = {
   price?: unknown;
@@ -17,6 +18,7 @@ type EligibleFlight = {
   amount: number;
   stops: number;
   durationMinutes?: number;
+  airlineIdentity: FlightAirlineIdentity;
 };
 
 const fareSearchWindow: FareWindow = {
@@ -49,7 +51,12 @@ export function selectLowestEligibleFlight(options: SerpFlightOption[]): Eligibl
     const stops = Array.isArray(option.flights) ? Math.max(0, option.flights.length - 1) : null;
     const durationMinutes = typeof option.total_duration === "number" ? option.total_duration : null;
     return amount !== null && stops !== null && stops <= 1
-      ? [{ amount, stops, ...(durationMinutes !== null ? { durationMinutes } : {}) }]
+      ? [{
+        amount,
+        stops,
+        airlineIdentity: identityFromSerpFlightSegments(option.flights),
+        ...(durationMinutes !== null ? { durationMinutes } : {}),
+      }]
       : [];
   });
 
@@ -97,6 +104,7 @@ export async function getFlightSnapshot(
       departureDate: window.departureDate,
       returnDate: window.returnDate,
       stops: cheapest.stops,
+      airlineIdentity: cheapest.airlineIdentity,
       ...(cheapest.durationMinutes !== undefined ? { durationMinutes: cheapest.durationMinutes } : {}),
       status: "available",
     };

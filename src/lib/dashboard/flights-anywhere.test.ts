@@ -37,6 +37,35 @@ test("keeps a wider explore pile than the displayed cash row", () => {
   expect(pile.map(({ airportCode }) => airportCode)).toEqual(["IAH", "DEN", "SLO", "MCI", "BNA", "ORD", "AUS"]);
 });
 
+test("propagates Explore airline identity from the cheapest destination, not a more expensive one", () => {
+  const results = selectTopAnywhereFlights([
+    { name: "Houston", destination_airport: { code: "IAH" }, flight_price: 80, flight_duration: 70, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21", airline: "United", airline_code: "UA" },
+    { name: "Houston", destination_airport: { code: "IAH" }, flight_price: 120, flight_duration: 70, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21", airline: "American", airline_code: "AA" },
+  ], "Spring Break");
+
+  expect(results[0]).toMatchObject({ airportCode: "IAH", amount: 80 });
+  expect(results[0].airlineIdentity).toMatchObject({ kind: "single", segments: [expect.objectContaining({ iata: "UA" })] });
+});
+
+test("copies California winning snapshot identity onto the cash-row slot", () => {
+  const snapshot: FlightSnapshot = {
+    origin: "DFW",
+    destination: "SFO",
+    label: "San Francisco, California",
+    fetchedAt: "2026-07-21T00:00:00.000Z",
+    amount: 180,
+    currency: "USD",
+    departureDate: "2027-03-13",
+    returnDate: "2027-03-21",
+    stops: 0,
+    durationMinutes: 240,
+    status: "available",
+    airlineIdentity: { kind: "single", segments: [{ name: "United", iata: "UA", iataSource: "airline_code", operatingName: null, operatorStatus: "reported-marketing" }] },
+  };
+
+  expect(selectLowestCaliforniaFare([{ snapshot, windowLabel: "Spring Break" }])?.airlineIdentity?.segments[0]?.iata).toBe("UA");
+});
+
 test("selects the cheapest California fare within each school break", () => {
   const availableSnapshot = (destination: string, amount: number, durationMinutes: number): FlightSnapshot => ({
     origin: "DFW",

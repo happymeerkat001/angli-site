@@ -1,7 +1,9 @@
 import { partnerHubAirports } from "./config";
 import type { AnywhereFlightOption, PointsFlightOption, PointsProgram } from "./types";
 
+/** Legacy ranking heuristic only. Not a current Sapphire Reserve or Chase Travel redemption rate. */
 export const CHASE_CENTS_PER_POINT = 1.5;
+/** Legacy ranking heuristic only. Not used by purchase-method recommendations. */
 export const AMEX_CENTS_PER_POINT = 1;
 export const PARTNER_RANK_FACTOR = 0.875;
 

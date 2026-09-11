@@ -28,6 +28,7 @@ test("does not invent a round-trip price from a one-way fare", () => {
   const [deal] = parseFrontierDealsHtml("Dallas, TX (DFW) To Las Vegas, NV (LAS) Departing Mar 15, 2027 From $60 One-way", spring);
   expect(deal.amount).toBe(60);
   expect(deal.tripType).toBe("one-way");
+  expect(deal.airlineIdentity).toMatchObject({ kind: "single", segments: [expect.objectContaining({ iata: "F9", name: "Frontier" })] });
 });
 
 test("drops deals whose travel dates miss the selected break", () => {

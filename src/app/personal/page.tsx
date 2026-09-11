@@ -11,6 +11,7 @@ import { RefreshButton } from "@/components/RefreshButton";
 import { RandomInsightCard } from "@/components/RandomInsightCard";
 import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
 import { SeasonSelect } from "@/components/SeasonSelect";
+import { PurchaseMethodEstimate } from "@/components/PurchaseMethodEstimate";
 import insights from "@/lib/dashboard/insights.generated.json";
 import type { InsightEntry } from "@/lib/dashboard/types";
 import { refreshFlights, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis } from "./actions";
@@ -163,8 +164,28 @@ export default async function PersonalPage() {
                   <p className="mt-5 font-serif text-4xl font-semibold text-ink">${flight.amount?.toLocaleString()}</p>
                   <p className="mt-2 text-sm text-muted">Cheapest {flight.stops === 0 ? "nonstop" : "one-stop"} fare, round trip</p>
                   <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                  <PurchaseMethodEstimate input={{
+                    cashAmount: flight.amount,
+                    tripType: "round-trip",
+                    origin: flight.origin,
+                    destination: flight.destination,
+                    airlineIdentity: flight.airlineIdentity,
+                    identityMissingFromCache: flight.airlineIdentity === undefined,
+                  }} />
                 </>
-              ) : <p className="mt-5 text-sm text-muted">Live price unavailable today.</p>}
+              ) : (
+                <>
+                  <p className="mt-5 text-sm text-muted">Live price unavailable today.</p>
+                  <PurchaseMethodEstimate input={{
+                    cashAmount: null,
+                    tripType: "round-trip",
+                    origin: flight.origin,
+                    destination: flight.destination,
+                    airlineIdentity: flight.airlineIdentity,
+                    identityMissingFromCache: flight.airlineIdentity === undefined,
+                  }} />
+                </>
+              )}
             </section>
           ))}
         </div>
@@ -195,6 +216,14 @@ export default async function PersonalPage() {
                             <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
                             <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
                             <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                            <PurchaseMethodEstimate input={{
+                              cashAmount: flight.amount,
+                              tripType: "round-trip",
+                              origin: "DFW",
+                              destination: flight.airportCode,
+                              airlineIdentity: flight.airlineIdentity,
+                              identityMissingFromCache: flight.airlineIdentity === undefined,
+                            }} />
                           </section>
                         ))}
                       </div>
@@ -226,9 +255,17 @@ export default async function PersonalPage() {
                   <section key={`${flight.airportCode}-${flight.departureDate}-${flight.returnDate}`} className="rounded-[1.5rem] border border-line p-5">
                     <p className="text-sm font-semibold text-accent">{flight.airportCode}</p>
                     <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
-                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} · {flight.points.toLocaleString()} {flight.program} points</p>
+                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
                     <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
                     <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                    <PurchaseMethodEstimate input={{
+                      cashAmount: flight.amount,
+                      tripType: "round-trip",
+                      origin: "DFW",
+                      destination: flight.airportCode,
+                      airlineIdentity: flight.airlineIdentity,
+                      identityMissingFromCache: flight.airlineIdentity === undefined,
+                    }} />
                   </section>
                 ))}
               </div>
@@ -261,6 +298,14 @@ export default async function PersonalPage() {
                       <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
                     ) : null}
                     <p className="mt-2 text-sm text-muted">{flight.returnDate ? `${flight.departureDate} – ${flight.returnDate}` : flight.departureDate}</p>
+                    <PurchaseMethodEstimate input={{
+                      cashAmount: flight.amount,
+                      tripType: flight.tripType === "one-way" ? "one-way" : "round-trip",
+                      origin: flight.origin,
+                      destination: flight.airportCode,
+                      airlineIdentity: flight.airlineIdentity,
+                      identityMissingFromCache: flight.airlineIdentity === undefined,
+                    }} />
                   </section>
                 ))}
               </div>

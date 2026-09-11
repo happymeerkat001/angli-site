@@ -38,3 +38,18 @@ test("reads cached news and stock state instead of fetching them during render",
   expect(page).not.toContain("getStockHeadlines");
   expect(page).not.toContain("getStockAnalysis");
 });
+
+test("adds a purchase-method estimate on every flight card group and shows cash-only points-row prices", async () => {
+  const page = await readFile(new URL("./page.tsx", import.meta.url), "utf8");
+
+  expect(page).toContain("PurchaseMethodEstimate");
+  expect(page.match(/<PurchaseMethodEstimate/g)?.length).toBe(5);
+  expect(page).toContain("${flight.amount.toLocaleString()} round trip");
+  expect(page).not.toContain("legacy ranking");
+  expect(page).not.toContain("1.5¢");
+  expect(page).not.toContain("flight.points");
+  expect(page).toContain('id="fares-heading"');
+  expect(page).toContain('id="anywhere-heading"');
+  expect(page).toContain('id="points-heading"');
+  expect(page).toContain('id="frontier-heading"');
+});

@@ -1,3 +1,4 @@
+import { identityFromExploreDestination } from "./airline-identity";
 import { californiaAirports, schoolBreaks } from "./config";
 import { getFlexFlightSnapshot } from "./flights";
 import type { AnywhereDashboardValue, AnywhereFlightOption, FareWindow, FlightSnapshot, SourceResult } from "./types";
@@ -10,6 +11,8 @@ type SerpExploreDestination = {
   number_of_stops?: unknown;
   start_date?: unknown;
   end_date?: unknown;
+  airline?: unknown;
+  airline_code?: unknown;
 };
 
 type SerpExploreResponse = {
@@ -56,6 +59,7 @@ function mapExploreDestinations(destinations: SerpExploreDestination[], windowLa
       departureDate,
       returnDate,
       windowLabel,
+      airlineIdentity: identityFromExploreDestination(destination),
     }];
   });
 }
@@ -104,6 +108,7 @@ export function selectLowestCaliforniaFare(candidates: CaliforniaFareCandidate[]
       departureDate: snapshot.departureDate,
       returnDate: snapshot.returnDate,
       windowLabel,
+      ...(snapshot.airlineIdentity ? { airlineIdentity: snapshot.airlineIdentity } : {}),
     }];
   });
 

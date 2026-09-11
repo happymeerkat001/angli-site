@@ -62,6 +62,23 @@ export type FareWindow = {
   returnDate: string;
 };
 
+export type AirlineCodeSource = "airline_code" | "flight_number" | "logo" | "name";
+
+export type AirlineOperatorStatus = "verified-operating" | "reported-marketing" | "codeshare-unverified" | "unknown";
+
+export type AirlineRef = {
+  name: string | null;
+  iata: string | null;
+  iataSource: AirlineCodeSource | null;
+  operatingName: string | null;
+  operatorStatus: AirlineOperatorStatus;
+};
+
+export type FlightAirlineIdentity = {
+  kind: "single" | "mixed" | "unknown";
+  segments: AirlineRef[];
+};
+
 export type FlightSnapshot = FlightSearchRoute & {
   fetchedAt: string;
   amount: number | null;
@@ -71,6 +88,7 @@ export type FlightSnapshot = FlightSearchRoute & {
   stops: number | null;
   durationMinutes?: number;
   status: "available" | "unavailable";
+  airlineIdentity?: FlightAirlineIdentity;
 };
 
 export type CalendarEvent = {
@@ -95,6 +113,7 @@ export type AnywhereFlightOption = {
   departureDate: string;
   returnDate: string;
   windowLabel: string;
+  airlineIdentity?: FlightAirlineIdentity;
 };
 
 export type AnywhereWindowSection = {
@@ -130,6 +149,7 @@ export type FrontierDealOption = {
   returnDate: string | null;
   tripType: FrontierTripType;
   windowLabel: string;
+  airlineIdentity?: FlightAirlineIdentity;
 };
 
 export type TextInsightEntry = {
