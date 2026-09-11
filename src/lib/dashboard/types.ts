@@ -62,6 +62,36 @@ export type FareWindow = {
   returnDate: string;
 };
 
+export type HolidayId = "christmas" | "new-year" | "thanksgiving";
+
+export type Holiday = {
+  id: HolidayId;
+  date: string;
+  label: string;
+};
+
+export type HolidayCoverage = "none" | "any";
+
+export type SchoolBreak = FareWindow & {
+  holidayCoverage: HolidayCoverage;
+  holidays: Holiday[];
+};
+
+export type TripDatePair = {
+  departureDate: string;
+  returnDate: string;
+  nights: number;
+};
+
+export type SeasonSearchCursor = {
+  cursor: number;
+  lastBatch: Array<{ departureDate: string; returnDate: string }>;
+  totalPairs: number;
+  incomplete: boolean;
+  timedOut: boolean;
+  failedSearches: number;
+};
+
 export type AirlineCodeSource = "airline_code" | "flight_number" | "logo" | "name";
 
 export type AirlineOperatorStatus = "verified-operating" | "reported-marketing" | "codeshare-unverified" | "unknown";
@@ -121,11 +151,16 @@ export type AnywhereWindowSection = {
   departureDate: string;
   returnDate: string;
   options: AnywhereFlightOption[];
+  incomplete?: boolean;
 };
 
 export type AnywhereDashboardValue = {
   sections: AnywhereWindowSection[];
   pile: AnywhereFlightOption[];
+  incomplete: boolean;
+  timedOut: boolean;
+  failedSearches: number;
+  searchedPairs: Array<{ departureDate: string; returnDate: string }>;
 };
 
 export type PointsProgram = "Chase" | "Amex";

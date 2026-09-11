@@ -39,6 +39,20 @@ test("reads cached news and stock state instead of fetching them during render",
   expect(page).not.toContain("getStockAnalysis");
 });
 
+test("explains travel windows, sampled lowest-found results, and qualifying Frontier trips", async () => {
+  const page = await readFile(new URL("./page.tsx", import.meta.url), "utf8");
+
+  expect(page).toContain("Travel window:");
+  expect(page).toContain("Trips of 3–7 nights");
+  expect(page).toContain("Lowest found on up to 5 sampled date pairs");
+  expect(page).toContain("tripDateLine");
+  expect(page).toContain("holidayMark");
+  expect(page).toContain("No advertised Frontier round trips fit this 3–7 night window");
+  expect(page).toContain("presentFlightState");
+  expect(page).toContain("export const maxDuration = 60");
+  expect(page).toContain("FRONTIER_DEALS_URL");
+});
+
 test("adds a purchase-method estimate on every flight card group and shows cash-only points-row prices", async () => {
   const page = await readFile(new URL("./page.tsx", import.meta.url), "utf8");
 

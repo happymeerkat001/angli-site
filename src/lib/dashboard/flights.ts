@@ -81,11 +81,11 @@ export async function getFlightSnapshot(
   apiKey: string,
   window: FareWindow,
   fetchedAt: string,
+  options?: { timeoutMs?: number },
 ): Promise<FlightSnapshot> {
   try {
     const response = await fetch(serpApiFlightsUrl(route, apiKey, window), {
-
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 15_000),
     });
     if (!response.ok) throw new Error(`Flight response: ${response.status}`);
 

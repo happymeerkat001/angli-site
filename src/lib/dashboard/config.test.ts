@@ -11,12 +11,17 @@ test("configures the requested flight routes and HTTPS news sources", () => {
 });
 
 test("configures the MCA school-break fare windows", () => {
-  expect(schoolBreaks).toEqual([
+  expect(schoolBreaks.map(({ label, departureDate, returnDate }) => ({ label, departureDate, returnDate }))).toEqual([
     { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13" },
     { label: "Thanksgiving Break", departureDate: "2026-11-21", returnDate: "2026-11-29" },
     { label: "Winter Break", departureDate: "2026-12-19", returnDate: "2027-01-06" },
     { label: "Spring Break", departureDate: "2027-03-13", returnDate: "2027-03-21" },
     { label: "Summer Break", departureDate: "2027-06-18", returnDate: "2027-07-09" },
+  ]);
+  expect(schoolBreaks[1].holidays).toEqual([{ id: "thanksgiving", date: "2026-11-26", label: "Thanksgiving" }]);
+  expect(schoolBreaks[2].holidays.map(({ id, date }) => ({ id, date }))).toEqual([
+    { id: "christmas", date: "2026-12-25" },
+    { id: "new-year", date: "2027-01-01" },
   ]);
 });
 

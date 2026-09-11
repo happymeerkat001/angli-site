@@ -1,4 +1,4 @@
-import type { CaliforniaAirport, FareWindow, FlightRoute, NewsSource, StockPosition } from "./types";
+import type { CaliforniaAirport, FlightRoute, NewsSource, SchoolBreak, StockPosition } from "./types";
 
 const googleNewsBaseUrl = "https://news.google.com/rss";
 
@@ -41,13 +41,28 @@ export const flightRoutes: FlightRoute[] = [
   { origin: "DFW", destination: "XUZ", label: "Xuzhou, China" },
 ];
 
-export const schoolBreaks: FareWindow[] = [
-  { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13" },
-  { label: "Thanksgiving Break", departureDate: "2026-11-21", returnDate: "2026-11-29" },
-  { label: "Winter Break", departureDate: "2026-12-19", returnDate: "2027-01-06" },
-  { label: "Spring Break", departureDate: "2027-03-13", returnDate: "2027-03-21" },
-  // The full summer break is 2027-05-28–2027-08-12; search its mid-summer slice.
-  { label: "Summer Break", departureDate: "2027-06-18", returnDate: "2027-07-09" },
+export const schoolBreaks: SchoolBreak[] = [
+  { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13", holidayCoverage: "none", holidays: [] },
+  {
+    label: "Thanksgiving Break",
+    departureDate: "2026-11-21",
+    returnDate: "2026-11-29",
+    holidayCoverage: "any",
+    holidays: [{ id: "thanksgiving", date: "2026-11-26", label: "Thanksgiving" }],
+  },
+  {
+    label: "Winter Break",
+    departureDate: "2026-12-19",
+    returnDate: "2027-01-06",
+    holidayCoverage: "any",
+    holidays: [
+      { id: "christmas", date: "2026-12-25", label: "Christmas" },
+      { id: "new-year", date: "2027-01-01", label: "New Year's" },
+    ],
+  },
+  { label: "Spring Break", departureDate: "2027-03-13", returnDate: "2027-03-21", holidayCoverage: "none", holidays: [] },
+  // Search the configured mid-summer window. A prior note mentioned 2027-05-28–2027-08-12 as the full break; those dates are not verified from the school calendar, so they are not used as the search window.
+  { label: "Summer Break", departureDate: "2027-06-18", returnDate: "2027-07-09", holidayCoverage: "none", holidays: [] },
 ];
 
 export const californiaAirports: CaliforniaAirport[] = [

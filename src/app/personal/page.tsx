@@ -4,8 +4,10 @@ import { readFlightState } from "@/lib/dashboard/flight-store";
 import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { readStockState } from "@/lib/dashboard/stock-store";
-import { fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { fareSearch, FRONTIER_DEALS_URL, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { presentFlightState } from "@/lib/dashboard/flight-store";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
+import { coveredHolidays, holidayInclusionLabel, holidayRuleCopy, nightsBetween } from "@/lib/dashboard/trip-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
 import { RandomInsightCard } from "@/components/RandomInsightCard";
@@ -17,6 +19,7 @@ import type { InsightEntry } from "@/lib/dashboard/types";
 import { refreshFlights, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 export const metadata = {
   title: "Personal",
@@ -38,22 +41,39 @@ function staleBanner(rowSeason: string, selectedSeason: string) {
   return `Showing ${rowSeason} — refresh for ${selectedSeason}`;
 }
 
+function tripDateLine(departureDate: string, returnDate: string | null) {
+  if (!returnDate) return departureDate;
+  const nights = nightsBetween(departureDate, returnDate);
+  return nights === null ? `${departureDate} – ${returnDate}` : `${departureDate} – ${returnDate} · ${nights} night${nights === 1 ? "" : "s"}`;
+}
+
+function holidayMark(departureDate: string, returnDate: string | null, seasonLabel: string) {
+  if (!returnDate) return null;
+  const schoolBreak = schoolBreaks.find((item) => item.label === seasonLabel);
+  if (!schoolBreak) return null;
+  return holidayInclusionLabel(coveredHolidays({ departureDate, returnDate }, schoolBreak));
+}
+
 const googleFlightsUrl = "https://www.google.com/travel/flights";
 
 export default async function PersonalPage() {
   const now = new Date();
   const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
   const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
-  const [agenda, flightState, schedulePhotoState, newsState, stockState] = await Promise.all([
+  const [agenda, storedFlightState, schedulePhotoState, newsState, stockState] = await Promise.all([
     getCalendarAgenda(),
     readFlightState(),
     readSchedulePhotoState(),
     readNewsState(),
     readStockState(),
   ]);
+  const flightState = presentFlightState(storedFlightState);
   const flights = flightState?.flights ?? [];
   const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
   const currentSeason = flightState?.anywhereSeasonLabel ?? nearestUpcomingWindow(now, schoolBreaks).label;
+  const selectedBreak = schoolBreaks.find((item) => item.label === currentSeason) ?? nearestUpcomingWindow(now, schoolBreaks);
+  const coverage = flightState?.coverageBySeason?.[currentSeason];
+  const holidayRule = holidayRuleCopy(selectedBreak);
   const points = flightState?.points ?? { status: "error" as const, message: "Not yet loaded — press Refresh points" };
   const frontier = flightState?.frontier ?? { status: "error" as const, message: "Not yet loaded — press Refresh Frontier" };
   const pointsBanner = staleBanner(flightState?.pointsSeasonLabel ?? "", currentSeason);
@@ -192,6 +212,12 @@ export default async function PersonalPage() {
       </section>
 
       <SeasonSelect seasons={schoolBreaks.map(({ label }) => label)} currentSeason={currentSeason} />
+      <div className="mb-6 space-y-2 text-sm text-muted">
+        <p>Travel window: {selectedBreak.departureDate} – {selectedBreak.returnDate}</p>
+        <p>Trips of 3–7 nights, with departure and return inside this break. Lowest found on up to 5 sampled date pairs, not every date in the window.</p>
+        {holidayRule ? <p>{holidayRule}</p> : null}
+        {coverage?.incomplete ? <p>Some sampled dates failed; showing lowest found from the rest.</p> : null}
+      </div>
       <section aria-labelledby="anywhere-heading">
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
@@ -206,7 +232,8 @@ export default async function PersonalPage() {
               <div className="space-y-8">
                 {anywhere.value.map((group) => (
                   <section key={group.windowLabel}>
-                    <h3 className={`font-serif text-2xl font-semibold ${group.windowLabel === "Summer Break" && isWithinLookaheadWindow(now, group.departureDate, 4) ? "text-red-700" : "text-ink"}`}>{group.windowLabel === "Summer Break" ? "Domestic Summer Break" : group.windowLabel}: {group.departureDate} – {group.returnDate} (start looking {subtractMonths(group.departureDate, 4)})</h3>
+                    <h3 className={`font-serif text-2xl font-semibold ${group.windowLabel === "Summer Break" && isWithinLookaheadWindow(now, group.departureDate, 4) ? "text-red-700" : "text-ink"}`}>{group.windowLabel === "Summer Break" ? "Domestic Summer Break" : group.windowLabel}</h3>
+                    <p className="mt-1 text-sm text-muted">Travel window: {group.departureDate} – {group.returnDate} (start looking {subtractMonths(group.departureDate, 4)})</p>
                     {group.options.length > 0 ? (
                       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         {group.options.map((flight) => (
@@ -215,7 +242,8 @@ export default async function PersonalPage() {
                             <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
                             <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
                             <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
-                            <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                            <p className="mt-2 text-sm text-muted">{tripDateLine(flight.departureDate, flight.returnDate)}</p>
+                            {holidayMark(flight.departureDate, flight.returnDate, group.windowLabel) ? <p className="mt-1 text-sm text-muted">{holidayMark(flight.departureDate, flight.returnDate, group.windowLabel)}</p> : null}
                             <PurchaseMethodEstimate input={{
                               cashAmount: flight.amount,
                               tripType: "round-trip",
@@ -227,11 +255,11 @@ export default async function PersonalPage() {
                           </section>
                         ))}
                       </div>
-                    ) : <p className="mt-4 text-sm text-muted">No nearby flights found for this break.</p>}
+                    ) : <p className="mt-4 text-sm text-muted">{coverage?.totalPairs === 0 ? "No remaining 3–7 night trips in this travel window." : "No qualifying 3–7 night trips found for the sampled dates."}</p>}
                   </section>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">No nearby flights found for the school breaks.</p>
+            ) : <p className="text-sm text-muted">{coverage?.totalPairs === 0 ? "No remaining 3–7 night trips in this travel window." : "No qualifying 3–7 night trips found for the sampled dates."}</p>
           ) : <p className="text-sm text-muted">{anywhere.message}. SerpApi resets {nextSerpApiReset(now, serpApiRenewalDay)}.</p>}
         </section>
       </section>
@@ -257,7 +285,8 @@ export default async function PersonalPage() {
                     <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
                     <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
                     <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
-                    <p className="mt-2 text-sm text-muted">{flight.departureDate} – {flight.returnDate}</p>
+                    <p className="mt-2 text-sm text-muted">{tripDateLine(flight.departureDate, flight.returnDate)}</p>
+                    {holidayMark(flight.departureDate, flight.returnDate, currentSeason) ? <p className="mt-1 text-sm text-muted">{holidayMark(flight.departureDate, flight.returnDate, currentSeason)}</p> : null}
                     <PurchaseMethodEstimate input={{
                       cashAmount: flight.amount,
                       tripType: "round-trip",
@@ -269,7 +298,7 @@ export default async function PersonalPage() {
                   </section>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">No strong points deals found for this break.</p>
+            ) : <p className="text-sm text-muted">No qualifying 3–7 night points trips found for the sampled dates.</p>
           ) : <p className="text-sm text-muted">{points.message}.</p>}
         </section>
       </section>
@@ -282,6 +311,9 @@ export default async function PersonalPage() {
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Dallas · Frontier deals</p>
             <h2 id="frontier-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Frontier from Dallas</h2>
+            <p className="mt-1 text-sm text-muted">
+              <a href={FRONTIER_DEALS_URL} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">Frontier deals board</a>
+            </p>
           </div>
         </div>
         <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
@@ -297,7 +329,8 @@ export default async function PersonalPage() {
                     {flight.durationMinutes !== null && flight.stops !== null ? (
                       <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
                     ) : null}
-                    <p className="mt-2 text-sm text-muted">{flight.returnDate ? `${flight.departureDate} – ${flight.returnDate}` : flight.departureDate}</p>
+                    <p className="mt-2 text-sm text-muted">{tripDateLine(flight.departureDate, flight.returnDate)}</p>
+                    {holidayMark(flight.departureDate, flight.returnDate, currentSeason) ? <p className="mt-1 text-sm text-muted">{holidayMark(flight.departureDate, flight.returnDate, currentSeason)}</p> : null}
                     <PurchaseMethodEstimate input={{
                       cashAmount: flight.amount,
                       tripType: flight.tripType === "one-way" ? "one-way" : "round-trip",
@@ -309,7 +342,7 @@ export default async function PersonalPage() {
                   </section>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">No Frontier Dallas deals overlap this break.</p>
+            ) : <p className="text-sm text-muted">No advertised Frontier round trips fit this 3–7 night window. This is not a complete Frontier search.</p>
           ) : <p className="text-sm text-muted">{frontier.message}.</p>}
         </section>
       </section>

@@ -20,7 +20,7 @@ export function windowsInBookingRange(now: Date, windows: FareWindow[]): FareWin
   return windows.filter(({ departureDate }) => departureDate > today && departureDate < cutoff);
 }
 
-export function nearestUpcomingWindow(now: Date, windows: FareWindow[]): FareWindow {
+export function nearestUpcomingWindow<T extends FareWindow>(now: Date, windows: T[]): T {
   const today = now.toISOString().slice(0, 10);
   return windows.find(({ departureDate }) => departureDate > today) ?? windows.at(-1)!;
 }

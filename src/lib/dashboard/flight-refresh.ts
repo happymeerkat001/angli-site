@@ -4,10 +4,21 @@ import { getAnywhereDashboard } from "./flights-anywhere";
 import { getFrontierDashboard } from "./flights-frontier";
 import { selectTopPointsFlights } from "./flights-points";
 import { getFlightDashboard } from "./flights";
-import { acquireRefreshLock, mergeFlightState, readFlightState, releaseRefreshLock, writeFlightState } from "./flight-store";
-import type { AnywhereFlightOption, AnywhereWindowSection, FareWindow } from "./types";
+import {
+  acquireRefreshLock,
+  compatiblePile,
+  currentPolicyFingerprint,
+  mergeFlightState,
+  presentFlightState,
+  readFlightState,
+  REFRESH_BUDGET_MS,
+  releaseRefreshLock,
+  writeFlightState,
+} from "./flight-store";
+import { isoToday, listValidTripPairs, orderTripPairsForSearch, SEARCH_BATCH_SIZE, selectSearchBatch, tripFitsPolicy } from "./trip-dates";
+import type { AnywhereFlightOption, AnywhereWindowSection, SchoolBreak, SeasonSearchCursor } from "./types";
 
-function resolveWindow(seasonLabel: string | undefined, now = new Date()): FareWindow {
+function resolveWindow(seasonLabel: string | undefined, now = new Date()): SchoolBreak {
   return schoolBreaks.find(({ label }) => label === seasonLabel)
     ?? nearestUpcomingWindow(now, schoolBreaks);
 }
@@ -17,74 +28,161 @@ function cashAirportCodes(anywhere: { status: string; value?: AnywhereWindowSect
   return anywhere.value.flatMap((group) => group.options.map((option) => option.airportCode));
 }
 
-function rankPoints(pile: AnywhereFlightOption[], anywhere: { status: string; value?: AnywhereWindowSection[] }) {
-  return selectTopPointsFlights(pile, cashAirportCodes(anywhere));
+function rankPoints(pile: AnywhereFlightOption[], anywhere: { status: string; value?: AnywhereWindowSection[] }, schoolBreak: SchoolBreak, today: string) {
+  return selectTopPointsFlights(
+    pile.filter((option) => tripFitsPolicy(option, schoolBreak, today)),
+    cashAirportCodes(anywhere),
+  );
 }
 
-export async function refreshFlightState() {
-  if (!(await acquireRefreshLock())) return { ok: false, reason: "refresh already in progress" };
+function coverageFor(
+  searched: ReturnType<typeof selectSearchBatch>,
+  totalPairs: number,
+  extra: Pick<SeasonSearchCursor, "incomplete" | "timedOut" | "failedSearches">,
+): SeasonSearchCursor {
+  return {
+    cursor: searched.nextCursor,
+    lastBatch: searched.batch.map((pair) => ({ departureDate: pair.departureDate, returnDate: pair.returnDate })),
+    totalPairs,
+    incomplete: extra.incomplete,
+    timedOut: extra.timedOut,
+    failedSearches: extra.failedSearches,
+  };
+}
+
+function nextBatch(schoolBreak: SchoolBreak, today: string, previous: SeasonSearchCursor | undefined) {
+  const ordered = orderTripPairsForSearch(listValidTripPairs(schoolBreak, today), schoolBreak);
+  return {
+    ordered,
+    searched: selectSearchBatch(ordered, previous?.cursor ?? 0, SEARCH_BATCH_SIZE),
+  };
+}
+
+export async function refreshFlightState(now = new Date()) {
+  const lock = await acquireRefreshLock();
+  if (!lock.acquired) return { ok: false, reason: "refresh already in progress" };
   try {
-    const previous = await readFlightState();
-    const window = resolveWindow(previous?.anywhereSeasonLabel);
-    const [flights, anywhere] = await Promise.all([getFlightDashboard(), getAnywhereDashboard([window])]);
+    const fingerprint = currentPolicyFingerprint();
+    const previous = presentFlightState(await readFlightState(), fingerprint);
+    const window = resolveWindow(previous?.anywhereSeasonLabel, now);
+    const today = isoToday(now);
+    const { ordered, searched } = nextBatch(window, today, previous?.coverageBySeason?.[window.label]);
+    const [flights, anywhere] = await Promise.all([
+      getFlightDashboard(),
+      getAnywhereDashboard({ schoolBreak: window, datePairs: searched.batch, now, budgetMs: REFRESH_BUDGET_MS }),
+    ]);
     const sections = anywhere.status === "ok" ? { status: "ok" as const, value: anywhere.value.sections } : anywhere;
     await writeFlightState(mergeFlightState(previous, {
       flights: flights.every((flight) => flight.status === "unavailable") && previous ? previous.flights : flights,
-      anywhere: sections.status === "error" && previous ? previous.anywhere : sections,
+      anywhere: sections.status === "error" && previous?.anywhere.status === "ok" ? previous.anywhere : sections,
       anywherePile: anywhere.status === "ok" ? anywhere.value.pile : previous?.anywherePile,
       anywherePileSeasonLabel: anywhere.status === "ok" ? window.label : previous?.anywherePileSeasonLabel,
+      anywherePileFingerprint: anywhere.status === "ok" ? fingerprint : previous?.anywherePileFingerprint,
       anywhereSeasonLabel: window.label,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt: now.toISOString(),
+      policyFingerprint: fingerprint,
+      coverageBySeason: {
+        ...(previous?.coverageBySeason ?? {}),
+        [window.label]: anywhere.status === "ok"
+          ? coverageFor(searched, ordered.length, {
+            incomplete: anywhere.value.incomplete,
+            timedOut: anywhere.value.timedOut,
+            failedSearches: anywhere.value.failedSearches,
+          })
+          : previous?.coverageBySeason?.[window.label] ?? {
+            cursor: previous?.coverageBySeason?.[window.label]?.cursor ?? 0,
+            lastBatch: searched.batch.map((pair) => ({ departureDate: pair.departureDate, returnDate: pair.returnDate })),
+            totalPairs: ordered.length,
+            incomplete: true,
+            timedOut: false,
+            failedSearches: 1,
+          },
+      },
     }));
     return { ok: true };
-  } finally { await releaseRefreshLock(); }
+  } finally { await releaseRefreshLock(lock.token); }
 }
 
-export async function refreshAnywhereSeason(seasonLabel: string) {
-  if (!(await acquireRefreshLock())) return { ok: false, reason: "refresh already in progress" };
+export async function refreshAnywhereSeason(seasonLabel: string, now = new Date()) {
+  const lock = await acquireRefreshLock();
+  if (!lock.acquired) return { ok: false, reason: "refresh already in progress" };
   try {
-    const previous = await readFlightState();
-    const window = resolveWindow(seasonLabel);
-    const anywhere = await getAnywhereDashboard([window]);
+    const fingerprint = currentPolicyFingerprint();
+    const previous = presentFlightState(await readFlightState(), fingerprint);
+    const window = resolveWindow(seasonLabel, now);
+    const today = isoToday(now);
+    const { ordered, searched } = nextBatch(window, today, previous?.coverageBySeason?.[window.label]);
+    const anywhere = await getAnywhereDashboard({ schoolBreak: window, datePairs: searched.batch, now, budgetMs: REFRESH_BUDGET_MS });
     const sections = anywhere.status === "ok" ? { status: "ok" as const, value: anywhere.value.sections } : anywhere;
     await writeFlightState(mergeFlightState(previous, {
       flights: previous?.flights ?? [],
       anywhere: sections,
       anywherePile: anywhere.status === "ok" ? anywhere.value.pile : previous?.anywherePile,
       anywherePileSeasonLabel: anywhere.status === "ok" ? window.label : previous?.anywherePileSeasonLabel,
+      anywherePileFingerprint: anywhere.status === "ok" ? fingerprint : previous?.anywherePileFingerprint,
       anywhereSeasonLabel: window.label,
-      fetchedAt: new Date().toISOString(),
+      fetchedAt: now.toISOString(),
+      policyFingerprint: fingerprint,
+      coverageBySeason: {
+        ...(previous?.coverageBySeason ?? {}),
+        [window.label]: anywhere.status === "ok"
+          ? coverageFor(searched, ordered.length, {
+            incomplete: anywhere.value.incomplete,
+            timedOut: anywhere.value.timedOut,
+            failedSearches: anywhere.value.failedSearches,
+          })
+          : previous?.coverageBySeason?.[window.label] ?? {
+            cursor: previous?.coverageBySeason?.[window.label]?.cursor ?? 0,
+            lastBatch: searched.batch.map((pair) => ({ departureDate: pair.departureDate, returnDate: pair.returnDate })),
+            totalPairs: ordered.length,
+            incomplete: true,
+            timedOut: false,
+            failedSearches: 1,
+          },
+      },
     }));
     return { ok: true };
-  } finally { await releaseRefreshLock(); }
+  } finally { await releaseRefreshLock(lock.token); }
 }
 
-export async function refreshPointsSeason() {
-  if (!(await acquireRefreshLock())) return { ok: false, reason: "refresh already in progress" };
+export async function refreshPointsSeason(now = new Date()) {
+  const lock = await acquireRefreshLock();
+  if (!lock.acquired) return { ok: false, reason: "refresh already in progress" };
   try {
-    const previous = await readFlightState();
-    const window = resolveWindow(previous?.anywhereSeasonLabel);
-    const now = new Date().toISOString();
-    const warmPile = previous?.anywherePileSeasonLabel === window.label ? previous.anywherePile : [];
-    if (warmPile && warmPile.length > 0) {
+    const fingerprint = currentPolicyFingerprint();
+    const previous = presentFlightState(await readFlightState(), fingerprint);
+    const window = resolveWindow(previous?.anywhereSeasonLabel, now);
+    const today = isoToday(now);
+    const stamp = now.toISOString();
+    const warmPile = compatiblePile(previous, window.label, fingerprint);
+    if (warmPile.length > 0) {
       await writeFlightState(mergeFlightState(previous, {
         anywhereSeasonLabel: window.label,
-        fetchedAt: previous?.fetchedAt ?? now,
-        points: { status: "ok", value: rankPoints(warmPile, previous?.anywhere ?? { status: "error" }) },
+        fetchedAt: previous?.fetchedAt ?? stamp,
+        points: { status: "ok", value: rankPoints(warmPile, previous?.anywhere ?? { status: "error" }, window, today) },
         pointsSeasonLabel: window.label,
-        pointsFetchedAt: now,
+        pointsFetchedAt: stamp,
+        policyFingerprint: fingerprint,
       }));
       return { ok: true, fetched: false };
     }
 
-    const anywhere = await getAnywhereDashboard([window]);
+    const { searched } = nextBatch(window, today, previous?.coverageBySeason?.[window.label]);
+    const anywhere = await getAnywhereDashboard({
+      schoolBreak: window,
+      datePairs: searched.batch,
+      includeCalifornia: false,
+      now,
+      budgetMs: REFRESH_BUDGET_MS,
+    });
     if (anywhere.status === "error") {
       await writeFlightState(mergeFlightState(previous, {
         anywhereSeasonLabel: previous?.anywhereSeasonLabel ?? window.label,
-        fetchedAt: previous?.fetchedAt ?? now,
+        fetchedAt: previous?.fetchedAt ?? stamp,
         points: { status: "error", message: anywhere.message },
         pointsSeasonLabel: window.label,
-        pointsFetchedAt: now,
+        pointsFetchedAt: stamp,
+        policyFingerprint: fingerprint,
       }));
       return { ok: true, fetched: true };
     }
@@ -93,29 +191,34 @@ export async function refreshPointsSeason() {
       anywhereSeasonLabel: previous?.anywhereSeasonLabel ?? window.label,
       anywherePile: anywhere.value.pile,
       anywherePileSeasonLabel: window.label,
-      fetchedAt: previous?.fetchedAt ?? now,
-      points: { status: "ok", value: rankPoints(anywhere.value.pile, previous?.anywhere ?? { status: "error" }) },
+      anywherePileFingerprint: fingerprint,
+      fetchedAt: previous?.fetchedAt ?? stamp,
+      points: { status: "ok", value: rankPoints(anywhere.value.pile, previous?.anywhere ?? { status: "error" }, window, today) },
       pointsSeasonLabel: window.label,
-      pointsFetchedAt: now,
+      pointsFetchedAt: stamp,
+      policyFingerprint: fingerprint,
     }));
     return { ok: true, fetched: true };
-  } finally { await releaseRefreshLock(); }
+  } finally { await releaseRefreshLock(lock.token); }
 }
 
-export async function refreshFrontierSeason() {
-  if (!(await acquireRefreshLock())) return { ok: false, reason: "refresh already in progress" };
+export async function refreshFrontierSeason(now = new Date()) {
+  const lock = await acquireRefreshLock();
+  if (!lock.acquired) return { ok: false, reason: "refresh already in progress" };
   try {
-    const previous = await readFlightState();
-    const window = resolveWindow(previous?.anywhereSeasonLabel);
-    const now = new Date().toISOString();
-    const frontier = await getFrontierDashboard(window);
+    const fingerprint = currentPolicyFingerprint();
+    const previous = presentFlightState(await readFlightState(), fingerprint);
+    const window = resolveWindow(previous?.anywhereSeasonLabel, now);
+    const stamp = now.toISOString();
+    const frontier = await getFrontierDashboard(window, now);
     await writeFlightState(mergeFlightState(previous, {
       anywhereSeasonLabel: previous?.anywhereSeasonLabel ?? window.label,
-      fetchedAt: previous?.fetchedAt ?? now,
+      fetchedAt: previous?.fetchedAt ?? stamp,
       frontier: frontier.status === "error" && previous?.frontier.status === "ok" ? previous.frontier : frontier,
       frontierSeasonLabel: window.label,
-      frontierFetchedAt: now,
+      frontierFetchedAt: stamp,
+      policyFingerprint: fingerprint,
     }));
     return { ok: true };
-  } finally { await releaseRefreshLock(); }
+  } finally { await releaseRefreshLock(lock.token); }
 }

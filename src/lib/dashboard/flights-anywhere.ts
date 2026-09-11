@@ -1,7 +1,10 @@
 import { identityFromExploreDestination } from "./airline-identity";
-import { californiaAirports, schoolBreaks } from "./config";
-import { getFlexFlightSnapshot } from "./flights";
-import type { AnywhereDashboardValue, AnywhereFlightOption, FareWindow, FlightSnapshot, SourceResult } from "./types";
+import { californiaAirports } from "./config";
+import { runBoundedTasks } from "./bounded-pool";
+import { FETCH_TIMEOUT_MS, REFRESH_BUDGET_MS, SEASONAL_SEARCH_CONCURRENCY } from "./flight-store";
+import { getFlightSnapshot } from "./flights";
+import { SEARCH_BATCH_SIZE, tripFitsPolicy } from "./trip-dates";
+import type { AnywhereDashboardValue, AnywhereFlightOption, FlightSnapshot, SchoolBreak, SourceResult, TripDatePair } from "./types";
 
 type SerpExploreDestination = {
   name?: unknown;
@@ -19,7 +22,7 @@ type SerpExploreResponse = {
   destinations?: SerpExploreDestination[];
 };
 
-export function serpApiExploreUrl(window: FareWindow, apiKey: string) {
+export function serpApiExploreUrl(window: Pick<SchoolBreak, "departureDate" | "returnDate"> & { label?: string }, apiKey: string) {
   const params = new URLSearchParams({
     engine: "google_travel_explore",
     departure_id: "DFW",
@@ -70,6 +73,14 @@ function uniqueCheapestByAirport(options: AnywhereFlightOption[], limit: number)
   return ranked.filter((option) => !seen.has(option.airportCode) && Boolean(seen.add(option.airportCode))).slice(0, limit);
 }
 
+export function filterQualifyingOptions(
+  options: AnywhereFlightOption[],
+  schoolBreak: SchoolBreak,
+  today?: string,
+): AnywhereFlightOption[] {
+  return options.filter((option) => tripFitsPolicy(option, schoolBreak, today));
+}
+
 export function selectTopAnywhereFlights(
   destinations: SerpExploreDestination[],
   windowLabel: string,
@@ -116,66 +127,145 @@ export function selectLowestCaliforniaFare(candidates: CaliforniaFareCandidate[]
 }
 
 export function selectCaliforniaFaresByWindow(candidates: CaliforniaFareCandidate[]) {
-  return Object.fromEntries(schoolBreaks.flatMap((window) => {
-    const fare = selectLowestCaliforniaFare(candidates.filter(({ windowLabel }) => windowLabel === window.label));
-    return fare ? [[window.label, fare]] : [];
+  const labels = [...new Set(candidates.map(({ windowLabel }) => windowLabel))];
+  return Object.fromEntries(labels.flatMap((windowLabel) => {
+    const fare = selectLowestCaliforniaFare(candidates.filter((candidate) => candidate.windowLabel === windowLabel));
+    return fare ? [[windowLabel, fare]] : [];
   })) as Record<string, AnywhereFlightOption>;
 }
 
-async function getCaliforniaFaresByWindow(windows: FareWindow[]): Promise<Record<string, AnywhereFlightOption>> {
-  const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
-  if (!apiKey) return {};
-
-  const fetchedAt = new Date().toISOString();
-  const candidates = await Promise.all(californiaAirports.flatMap((airport) => (
-    windows.map(async (window) => ({
-      snapshot: await getFlexFlightSnapshot(airport, apiKey, window, fetchedAt),
-      windowLabel: window.label,
-    }))
-  )));
-
-  return selectCaliforniaFaresByWindow(candidates);
+export function seasonalApiCallCount(pairCount: number, includeCalifornia: boolean) {
+  return pairCount * (1 + (includeCalifornia ? 3 : 0));
 }
 
-export async function getAnywhereDashboard(windows: FareWindow[]): Promise<SourceResult<AnywhereDashboardValue>> {
-  if (windows.length === 0) return { status: "ok", value: { sections: [], pile: [] } };
+const emptyDashboard = (
+  schoolBreak: SchoolBreak,
+  searchedPairs: Array<{ departureDate: string; returnDate: string }>,
+  extra: Partial<AnywhereDashboardValue> = {},
+): AnywhereDashboardValue => ({
+  sections: [{
+    windowLabel: schoolBreak.label,
+    departureDate: schoolBreak.departureDate,
+    returnDate: schoolBreak.returnDate,
+    options: [],
+  }],
+  pile: [],
+  incomplete: false,
+  timedOut: false,
+  failedSearches: 0,
+  searchedPairs,
+  ...extra,
+});
+
+export async function getAnywhereDashboard(input: {
+  schoolBreak: SchoolBreak;
+  datePairs: Array<Pick<TripDatePair, "departureDate" | "returnDate">>;
+  includeCalifornia?: boolean;
+  budgetMs?: number;
+  concurrency?: number;
+  now?: Date;
+}): Promise<SourceResult<AnywhereDashboardValue>> {
+  const includeCalifornia = input.includeCalifornia ?? true;
+  const uniquePairs = input.datePairs.filter((pair, index, pairs) => (
+    pairs.findIndex((candidate) => candidate.departureDate === pair.departureDate && candidate.returnDate === pair.returnDate) === index
+  )).slice(0, SEARCH_BATCH_SIZE);
+  if (uniquePairs.length === 0) {
+    return { status: "ok", value: emptyDashboard(input.schoolBreak, []) };
+  }
+
   const apiKey = process.env.SERP_API_KEY ?? process.env.SERPAPI_KEY;
   if (!apiKey) return { status: "error", message: "Flight search is not connected" };
 
-  const results = await Promise.all(windows.map(async (window) => {
-    try {
-      const response = await fetch(serpApiExploreUrl(window, apiKey), { signal: AbortSignal.timeout(15_000) });
+  const today = (input.now ?? new Date()).toISOString().slice(0, 10);
+  const fetchedAt = (input.now ?? new Date()).toISOString();
+  const timeoutMs = FETCH_TIMEOUT_MS;
+  type ExploreTask = { kind: "explore"; pair: (typeof uniquePairs)[number] };
+  type CaliforniaTask = { kind: "california"; pair: (typeof uniquePairs)[number]; airport: (typeof californiaAirports)[number] };
+  const tasks: Array<ExploreTask | CaliforniaTask> = uniquePairs.flatMap((pair) => ([
+    { kind: "explore" as const, pair },
+    ...(includeCalifornia ? californiaAirports.map((airport) => ({ kind: "california" as const, pair, airport })) : []),
+  ]));
+
+  const { results, timedOut } = await runBoundedTasks(tasks.map((task) => async () => {
+    if (task.kind === "explore") {
+      const response = await fetch(serpApiExploreUrl(task.pair, apiKey), { signal: AbortSignal.timeout(timeoutMs) });
       if (!response.ok) throw new Error(`Flight explore response: ${response.status}`);
       const data = await response.json() as SerpExploreResponse;
       return {
-        window,
-        failed: false,
-        options: selectTopAnywhereFlights(data.destinations ?? [], window.label),
-        pile: selectAnywherePile(data.destinations ?? [], window.label),
+        kind: "explore" as const,
+        pair: task.pair,
+        options: filterQualifyingOptions(
+          mapExploreDestinations(data.destinations ?? [], input.schoolBreak.label),
+          input.schoolBreak,
+          today,
+        ),
       };
-    } catch (error) {
-      console.error(`Flight explore unavailable for ${window.label}`, error);
-      return { window, failed: true, options: [] as AnywhereFlightOption[], pile: [] as AnywhereFlightOption[] };
     }
-  }));
 
-  if (results.every((result) => result.failed)) {
-    return { status: "error", message: "Flight search temporarily unavailable" };
+    return {
+      kind: "california" as const,
+      pair: task.pair,
+      snapshot: await getFlightSnapshot(task.airport, apiKey, {
+        label: input.schoolBreak.label,
+        departureDate: task.pair.departureDate,
+        returnDate: task.pair.returnDate,
+      }, fetchedAt, { timeoutMs }),
+    };
+  }), {
+    concurrency: input.concurrency ?? SEASONAL_SEARCH_CONCURRENCY,
+    budgetMs: input.budgetMs ?? REFRESH_BUDGET_MS,
+  });
+
+  const exploreOptions: AnywhereFlightOption[] = [];
+  const californiaCandidates: CaliforniaFareCandidate[] = [];
+  let failedSearches = 0;
+
+  results.forEach((result, index) => {
+    const task = tasks[index];
+    if (result.status !== "ok") {
+      failedSearches += 1;
+      if (result.status === "error" && task.kind === "explore") {
+        console.error(`Flight explore unavailable for ${input.schoolBreak.label} ${task.pair.departureDate}`, result.error);
+      }
+      return;
+    }
+    if (result.value.kind === "explore") {
+      exploreOptions.push(...result.value.options);
+      return;
+    }
+    californiaCandidates.push({
+      snapshot: result.value.snapshot,
+      windowLabel: input.schoolBreak.label,
+    });
+  });
+
+  const anySuccess = results.some((result) => result.status === "ok");
+  if (!anySuccess) {
+    return { status: "error", message: timedOut ? "Flight search timed out before returning qualifying trips" : "Flight search temporarily unavailable" };
   }
 
-  const californiaFares = await getCaliforniaFaresByWindow(windows);
-  const firstOk = results.find((result) => !result.failed);
+  const pile = uniqueCheapestByAirport(exploreOptions, 40);
+  const qualifyingCalifornia = selectLowestCaliforniaFare(californiaCandidates.filter(({ snapshot }) => (
+    tripFitsPolicy({ departureDate: snapshot.departureDate, returnDate: snapshot.returnDate }, input.schoolBreak, today)
+  )));
+  const options = uniqueCheapestByAirport(exploreOptions, 4);
+  const incomplete = failedSearches > 0 || timedOut;
 
   return {
     status: "ok",
     value: {
-      sections: results.map(({ window, options }) => ({
-        windowLabel: window.label,
-        departureDate: window.departureDate,
-        returnDate: window.returnDate,
-        options: californiaFares[window.label] ? [...options, californiaFares[window.label]] : options,
-      })),
-      pile: firstOk?.pile ?? [],
+      sections: [{
+        windowLabel: input.schoolBreak.label,
+        departureDate: input.schoolBreak.departureDate,
+        returnDate: input.schoolBreak.returnDate,
+        options: qualifyingCalifornia ? [...options, qualifyingCalifornia] : options,
+        incomplete,
+      }],
+      pile,
+      incomplete,
+      timedOut,
+      failedSearches,
+      searchedPairs: uniquePairs,
     },
   };
 }

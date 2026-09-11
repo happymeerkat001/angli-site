@@ -1,8 +1,8 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { schoolBreaks } from "./config";
-import { buildFlexCandidates } from "./flex-dates";
 import type { FlightSnapshot } from "./types";
-import { getAnywhereDashboard, selectAnywherePile, serpApiExploreUrl, selectCaliforniaFaresByWindow, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
+import { SEARCH_BATCH_SIZE } from "./trip-dates";
+import { filterQualifyingOptions, getAnywhereDashboard, selectAnywherePile, seasonalApiCallCount, serpApiExploreUrl, selectCaliforniaFaresByWindow, selectLowestCaliforniaFare, selectTopAnywhereFlights } from "./flights-anywhere";
 
 const originalSerpApiKey = process.env.SERP_API_KEY;
 
@@ -143,13 +143,17 @@ test("groups each break's explore results with its California fifth slot", async
 
     const airportCode = url.searchParams.get("arrival_id");
     return new Response(JSON.stringify({ best_flights: [{
-      price: airportCode === "SFO" ? (outboundDate === "2027-06-23" ? 100 : 150) : 200,
+      price: airportCode === "SFO" ? 100 : 200,
       flights: [{}],
       total_duration: 180,
     }] }), { status: 200 });
   });
 
-  const result = await getAnywhereDashboard([schoolBreaks[0]]);
+  const result = await getAnywhereDashboard({
+    schoolBreak: schoolBreaks[0],
+    datePairs: [{ departureDate: "2026-10-10", returnDate: "2026-10-13" }],
+    now: new Date("2026-07-24T00:00:00.000Z"),
+  });
 
   expect(result.status).toBe("ok");
   if (result.status !== "ok") throw new Error(result.message);
@@ -158,13 +162,114 @@ test("groups each break's explore results with its California fifth slot", async
   expect(result.value.sections.every(({ options }) => options.length === 2)).toBe(true);
   expect(result.value.sections.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
   expect(result.value.pile.map(({ airportCode }) => airportCode)).toEqual(["EXP"]);
-  expect(fetchMock).toHaveBeenCalledTimes(1 + 3 * buildFlexCandidates(schoolBreaks[0]).length);
+  expect(fetchMock).toHaveBeenCalledTimes(seasonalApiCallCount(1, true));
 });
 
 test("returns no sections without fetching when no windows are selected", async () => {
   process.env.SERP_API_KEY = "test-key";
   const fetchMock = vi.spyOn(global, "fetch");
 
-  await expect(getAnywhereDashboard([])).resolves.toEqual({ status: "ok", value: { sections: [], pile: [] } });
+  await expect(getAnywhereDashboard({ schoolBreak: schoolBreaks[0], datePairs: [] })).resolves.toEqual({
+    status: "ok",
+    value: {
+      sections: [{ windowLabel: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13", options: [] }],
+      pile: [],
+      incomplete: false,
+      timedOut: false,
+      failedSearches: 0,
+      searchedPairs: [],
+    },
+  });
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+test("filters provider-returned dates before ranking and caps a refresh at five pairs", async () => {
+  process.env.SERP_API_KEY = "test-key";
+  const extraPairs = [
+    { departureDate: "2027-03-13", returnDate: "2027-03-16" },
+    { departureDate: "2027-03-13", returnDate: "2027-03-17" },
+    { departureDate: "2027-03-13", returnDate: "2027-03-18" },
+    { departureDate: "2027-03-13", returnDate: "2027-03-19" },
+    { departureDate: "2027-03-13", returnDate: "2027-03-20" },
+    { departureDate: "2027-03-14", returnDate: "2027-03-17" },
+  ];
+  const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+    const url = new URL(input.toString());
+    if (url.searchParams.get("engine") === "google_travel_explore") {
+      return new Response(JSON.stringify({ destinations: [
+        { name: "Too long", destination_airport: { code: "LONG" }, flight_price: 50, flight_duration: 80, number_of_stops: 0, start_date: "2027-03-13", end_date: "2027-03-21" },
+        { name: "Austin", destination_airport: { code: "AUS" }, flight_price: 150, flight_duration: 60, number_of_stops: 0, start_date: url.searchParams.get("outbound_date"), end_date: url.searchParams.get("return_date") },
+      ] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ best_flights: [{ price: 200, flights: [{}], total_duration: 180 }] }), { status: 200 });
+  });
+
+  const result = await getAnywhereDashboard({
+    schoolBreak: schoolBreaks[3],
+    datePairs: extraPairs,
+    now: new Date("2026-09-11T00:00:00.000Z"),
+  });
+
+  expect(result.status).toBe("ok");
+  if (result.status !== "ok") throw new Error(result.message);
+  expect(result.value.searchedPairs).toHaveLength(SEARCH_BATCH_SIZE);
+  expect(fetchMock).toHaveBeenCalledTimes(seasonalApiCallCount(SEARCH_BATCH_SIZE, true));
+  expect(result.value.pile.every(({ airportCode }) => airportCode !== "LONG")).toBe(true);
+  expect(filterQualifyingOptions([
+    { destination: "Long", airportCode: "LONG", amount: 50, currency: "USD", durationMinutes: 80, stops: 0, departureDate: "2027-03-13", returnDate: "2027-03-21", windowLabel: "Spring Break" },
+    { destination: "Austin", airportCode: "AUS", amount: 150, currency: "USD", durationMinutes: 60, stops: 0, departureDate: "2027-03-13", returnDate: "2027-03-16", windowLabel: "Spring Break" },
+  ], schoolBreaks[3]).map(({ airportCode }) => airportCode)).toEqual(["AUS"]);
+});
+
+test("returns a timeout error when the budget expires before any search succeeds", async () => {
+  process.env.SERP_API_KEY = "test-key";
+  const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async () => new Response(JSON.stringify({ destinations: [] }), { status: 200 }));
+
+  const result = await getAnywhereDashboard({
+    schoolBreak: schoolBreaks[3],
+    datePairs: [{ departureDate: "2027-03-13", returnDate: "2027-03-16" }],
+    includeCalifornia: false,
+    budgetMs: 0,
+    now: new Date("2026-09-11T00:00:00.000Z"),
+  });
+
+  expect(result).toEqual({ status: "error", message: "Flight search timed out before returning qualifying trips" });
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+test("keeps valid successes when some date searches fail", async () => {
+  process.env.SERP_API_KEY = "test-key";
+  vi.spyOn(global, "fetch").mockImplementation(async (input) => {
+    const url = new URL(input.toString());
+    if (url.searchParams.get("outbound_date") === "2027-03-13") {
+      return new Response("nope", { status: 500 });
+    }
+    if (url.searchParams.get("engine") === "google_travel_explore") {
+      return new Response(JSON.stringify({ destinations: [{
+        name: "Denver",
+        destination_airport: { code: "DEN" },
+        flight_price: 90,
+        flight_duration: 120,
+        number_of_stops: 0,
+        start_date: url.searchParams.get("outbound_date"),
+        end_date: url.searchParams.get("return_date"),
+      }] }), { status: 200 });
+    }
+    return new Response(JSON.stringify({ best_flights: [] }), { status: 200 });
+  });
+
+  const result = await getAnywhereDashboard({
+    schoolBreak: schoolBreaks[3],
+    datePairs: [
+      { departureDate: "2027-03-13", returnDate: "2027-03-16" },
+      { departureDate: "2027-03-14", returnDate: "2027-03-17" },
+    ],
+    includeCalifornia: false,
+    now: new Date("2026-09-11T00:00:00.000Z"),
+  });
+
+  expect(result.status).toBe("ok");
+  if (result.status !== "ok") throw new Error(result.message);
+  expect(result.value.incomplete).toBe(true);
+  expect(result.value.pile.map(({ airportCode }) => airportCode)).toEqual(["DEN"]);
 });

@@ -1,6 +1,7 @@
 import { FRONTIER_AIRLINE_IDENTITY } from "./airline-identity";
 import { FRONTIER_DEALS_URL, frontierDallasOrigins } from "./config";
-import type { FareWindow, FrontierDealOption, FrontierTripType, SourceResult } from "./types";
+import { tripFitsPolicy } from "./trip-dates";
+import type { FrontierDealOption, FrontierTripType, SchoolBreak, SourceResult } from "./types";
 
 const dallasOrigins = new Set<string>(frontierDallasOrigins);
 
@@ -27,11 +28,16 @@ export function parseFrontierDate(value: string): string | null {
   return `${match[3]}-${month}-${match[2].padStart(2, "0")}`;
 }
 
-export function datesOverlapWindow(dates: Array<string | null>, window: FareWindow) {
+export function datesOverlapWindow(dates: Array<string | null>, window: Pick<SchoolBreak, "departureDate" | "returnDate">) {
   return dates.some((date) => date !== null && date >= window.departureDate && date <= window.returnDate);
 }
 
-export function parseFrontierDealsHtml(html: string, window: FareWindow): FrontierDealOption[] {
+export function isQualifyingFrontierDeal(deal: Pick<FrontierDealOption, "tripType" | "departureDate" | "returnDate">, schoolBreak: SchoolBreak, today?: string) {
+  if (deal.tripType !== "round-trip" || !deal.returnDate) return false;
+  return tripFitsPolicy({ departureDate: deal.departureDate, returnDate: deal.returnDate }, schoolBreak, today);
+}
+
+export function parseFrontierDealsHtml(html: string, window: SchoolBreak, today?: string): FrontierDealOption[] {
   const startPattern = /([A-Za-z .]+),\s*([A-Za-z .]+)\s*\(([A-Z]{3})\)\s*To\s*([A-Za-z .]+),\s*([A-Za-z .]+)\s*\(([A-Z]{3})\)/gi;
   const deals: FrontierDealOption[] = [];
   const seen = new Set<string>();
@@ -52,7 +58,7 @@ export function parseFrontierDealsHtml(html: string, window: FareWindow): Fronti
     const returnDate = tripType === "round-trip" && returning ? parseFrontierDate(returning[1]) : null;
     const amount = price ? Number(price[1].replace(/,/g, "")) : NaN;
     if (!dallasOrigins.has(origin) || !departureDate || Number.isNaN(amount)) continue;
-    if (!datesOverlapWindow([departureDate, returnDate], window)) continue;
+    if (!isQualifyingFrontierDeal({ tripType, departureDate, returnDate }, window, today)) continue;
 
     const key = `${origin}-${airportCode}-${departureDate}-${returnDate ?? "one-way"}-${amount}`;
     if (seen.has(key)) continue;
@@ -76,12 +82,12 @@ export function parseFrontierDealsHtml(html: string, window: FareWindow): Fronti
   return deals.sort((a, b) => a.amount - b.amount).slice(0, 5);
 }
 
-export async function getFrontierDashboard(window: FareWindow): Promise<SourceResult<FrontierDealOption[]>> {
+export async function getFrontierDashboard(window: SchoolBreak, now = new Date()): Promise<SourceResult<FrontierDealOption[]>> {
   try {
     const response = await fetch(FRONTIER_DEALS_URL, { signal: AbortSignal.timeout(15_000), headers: { accept: "text/html" } });
     if (!response.ok) throw new Error(`Frontier deals response: ${response.status}`);
     const html = await response.text();
-    return { status: "ok", value: parseFrontierDealsHtml(html, window) };
+    return { status: "ok", value: parseFrontierDealsHtml(html, window, now.toISOString().slice(0, 10)) };
   } catch (error) {
     console.error("Frontier deals unavailable", error);
     return { status: "error", message: "Frontier deals temporarily unavailable" };
