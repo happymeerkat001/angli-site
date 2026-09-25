@@ -9,6 +9,29 @@ test("extracts eligible highlights while excluding description and transcript", 
   expect(extractHighlights("=====\n==full insight from note==")).toEqual(["full insight from note"]);
 });
 
+test("extracts exactly five insights from the Matt Pocock numbered-list note", () => {
+  const mattNote = [
+    "# Matt pocock 5 to learn",
+    "",
+    "1. ==Learn to read code==",
+    "2. ==Learn to use the terminal==",
+    "3. ==Learn how good teams prevent human/agent mistakes (types, tests, linting)==",
+    "4. ==Learn how to structure your app to make your tests/types better (deep modules, seams, adapters)==",
+    "5. ==Learn ubiquitous language from DDD==",
+  ].join("\n");
+  const title = "Matt pocock 5 to learn";
+  expect(deriveTitleFromFilename("Matt pocock 5 to learn.md")).toBe(title);
+  expect(splitNoteSections(mattNote).title).toBe(title);
+  const entries = extractInsightsFromNote(mattNote);
+  expect(entries).toEqual([
+    { kind: "text", id: "matt-pocock-5-to-learn-1", noteTitle: title, insightText: "Learn to read code" },
+    { kind: "text", id: "matt-pocock-5-to-learn-2", noteTitle: title, insightText: "Learn to use the terminal" },
+    { kind: "text", id: "matt-pocock-5-to-learn-3", noteTitle: title, insightText: "Learn how good teams prevent human/agent mistakes (types, tests, linting)" },
+    { kind: "text", id: "matt-pocock-5-to-learn-4", noteTitle: title, insightText: "Learn how to structure your app to make your tests/types better (deep modules, seams, adapters)" },
+    { kind: "text", id: "matt-pocock-5-to-learn-5", noteTitle: title, insightText: "Learn ubiquitous language from DDD" },
+  ]);
+});
+
 test("keeps prose highlights while filtering short and code-heavy text", () => {
   expect(extractHighlights(`
 ==A durable idea worth remembering==

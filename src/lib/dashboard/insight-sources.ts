@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 const ALLOWED_ROOTS = [
@@ -8,6 +8,12 @@ const ALLOWED_ROOTS = [
   "z.Ingestion/personal.Spaces",
   "z.Ingestion/read.done",
   "z.Ingestion/Hedy-AI",
+];
+
+// Individually curated notes outside the allowed roots. Exact paths only —
+// this must never widen into scanning the z.Ingestion root.
+const ALLOWED_FILES = [
+  "z.Ingestion/Matt pocock 5 to learn.md",
 ];
 
 export function shouldExcludeInsightSourcePath(path: string) {
@@ -37,7 +43,21 @@ async function walkMarkdownFiles(directory: string): Promise<string[]> {
   return files.flat();
 }
 
+async function existingAllowedFiles(vaultRoot: string): Promise<string[]> {
+  const paths = await Promise.all(ALLOWED_FILES.map(async (file) => {
+    const path = resolve(vaultRoot, file);
+    try {
+      return (await stat(path)).isFile() ? [path] : [];
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }));
+  return paths.flat();
+}
+
 export async function collectInsightSourceFiles(vaultRoot: string) {
   const roots = ALLOWED_ROOTS.map((root) => resolve(vaultRoot, root));
-  return (await Promise.all(roots.map(walkMarkdownFiles))).flat();
+  const fromRoots = (await Promise.all(roots.map(walkMarkdownFiles))).flat();
+  return [...fromRoots, ...(await existingAllowedFiles(vaultRoot))];
 }

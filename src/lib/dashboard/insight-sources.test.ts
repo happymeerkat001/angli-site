@@ -32,6 +32,33 @@ test("collects nested allowed notes and excludes Manus and Hedy transcripts", as
   expect(files).not.toContain(transcriptNote);
 });
 
+test("includes the curated Matt Pocock note without broadening the z.Ingestion root", async () => {
+  const vault = await mkdtemp(join(tmpdir(), "insight-sources-"));
+  temporaryVaults.push(vault);
+  const mattNote = join(vault, "z.Ingestion", "Matt pocock 5 to learn.md");
+  const uncuratedSibling = join(vault, "z.Ingestion", "Some other root note.md");
+
+  await Promise.all([mattNote, uncuratedSibling].map(async (file) => {
+    await mkdir(join(file, ".."), { recursive: true });
+    await writeFile(file, "1. ==Learn to read code==\n");
+  }));
+
+  const files = await collectInsightSourceFiles(vault);
+  expect(files).toContain(mattNote);
+  expect(files).not.toContain(uncuratedSibling);
+});
+
+test("skips curated allowed files that do not exist", async () => {
+  const vault = await mkdtemp(join(tmpdir(), "insight-sources-"));
+  temporaryVaults.push(vault);
+  const readDoneNote = join(vault, "z.Ingestion", "read.done", "existing.md");
+  await mkdir(join(readDoneNote, ".."), { recursive: true });
+  await writeFile(readDoneNote, "# Test\n==insight==");
+
+  const files = await collectInsightSourceFiles(vault);
+  expect(files).toEqual([readDoneNote]);
+});
+
 test("identifies only the explicitly excluded source paths", () => {
   expect(shouldExcludeInsightSourcePath("/vault/z.Ingestion/personal.Spaces/Manus/draft.md")).toBe(true);
   expect(shouldExcludeInsightSourcePath("/vault/z.Ingestion/personal.Spaces/$$$/draft.md")).toBe(true);

@@ -160,5 +160,35 @@
     "id": "the-2-of-engineers-winning-the-ai-era-ex-meta-l8-2",
     "noteTitle": "The 2% of Engineers Winning the AI Era (Ex-Meta L8)",
     "insightText": "The durable idea is to build a learning-and-verification loop, not a dependency on a fashionable AI coding tool. AI can amplify output, but unexamined output amplifies failure too. The valuable operator identifies the highest-leverage problem, delegates with clear guardrails, measures the result, and codifies what was learned so the next cycle is safer and faster."
+  },
+  {
+    "kind": "text",
+    "id": "matt-pocock-5-to-learn-1",
+    "noteTitle": "Matt pocock 5 to learn",
+    "insightText": "Learn to read code"
+  },
+  {
+    "kind": "text",
+    "id": "matt-pocock-5-to-learn-2",
+    "noteTitle": "Matt pocock 5 to learn",
+    "insightText": "Learn to use the terminal"
+  },
+  {
+    "kind": "text",
+    "id": "matt-pocock-5-to-learn-3",
+    "noteTitle": "Matt pocock 5 to learn",
+    "insightText": "Learn how good teams prevent human/agent mistakes (types, tests, linting)"
+  },
+  {
+    "kind": "text",
+    "id": "matt-pocock-5-to-learn-4",
+    "noteTitle": "Matt pocock 5 to learn",
+    "insightText": "Learn how to structure your app to make your tests/types better (deep modules, seams, adapters)"
+  },
+  {
+    "kind": "text",
+    "id": "matt-pocock-5-to-learn-5",
+    "noteTitle": "Matt pocock 5 to learn",
+    "insightText": "Learn ubiquitous language from DDD"
   }
 ]
