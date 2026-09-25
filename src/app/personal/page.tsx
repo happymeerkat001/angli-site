@@ -4,10 +4,11 @@ import { readFlightState } from "@/lib/dashboard/flight-store";
 import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { readStockState } from "@/lib/dashboard/stock-store";
-import { fareSearch, FRONTIER_DEALS_URL, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
 import { presentFlightState } from "@/lib/dashboard/flight-store";
+import { FRONTIER_COMBO_BATCH, FRONTIER_MAX_REQUESTS } from "@/lib/dashboard/flights-frontier";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
-import { coveredHolidays, holidayInclusionLabel, holidayRuleCopy, nightsBetween } from "@/lib/dashboard/trip-dates";
+import { coveredHolidays, holidayInclusionLabel, holidayRuleCopy, isoToday, listValidTripPairs, nightsBetween } from "@/lib/dashboard/trip-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
 import { RandomInsightCard } from "@/components/RandomInsightCard";
@@ -16,7 +17,7 @@ import { SeasonSelect } from "@/components/SeasonSelect";
 import { PurchaseMethodEstimate } from "@/components/PurchaseMethodEstimate";
 import insights from "@/lib/dashboard/insights.generated.json";
 import type { InsightEntry } from "@/lib/dashboard/types";
-import { refreshFlights, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis } from "./actions";
+import { refreshAnywhere, refreshFlights, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -69,15 +70,19 @@ export default async function PersonalPage() {
   ]);
   const flightState = presentFlightState(storedFlightState);
   const flights = flightState?.flights ?? [];
-  const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh flights" };
+  const anywhere = flightState?.anywhere ?? { status: "error" as const, message: "Flight data not loaded yet — press Refresh cheapest flights" };
   const currentSeason = flightState?.anywhereSeasonLabel ?? nearestUpcomingWindow(now, schoolBreaks).label;
   const selectedBreak = schoolBreaks.find((item) => item.label === currentSeason) ?? nearestUpcomingWindow(now, schoolBreaks);
   const coverage = flightState?.coverageBySeason?.[currentSeason];
   const holidayRule = holidayRuleCopy(selectedBreak);
   const points = flightState?.points ?? { status: "error" as const, message: "Not yet loaded — press Refresh points" };
   const frontier = flightState?.frontier ?? { status: "error" as const, message: "Not yet loaded — press Refresh Frontier" };
+  const anywhereBanner = staleBanner(anywhere.status === "ok" && anywhere.value[0] ? anywhere.value[0].windowLabel : "", currentSeason);
+  const eligiblePairCount = listValidTripPairs(selectedBreak, isoToday(now)).length;
+  const overlapNights = nightsBetween(selectedBreak.departureDate, selectedBreak.returnDate);
   const pointsBanner = staleBanner(flightState?.pointsSeasonLabel ?? "", currentSeason);
   const frontierBanner = staleBanner(flightState?.frontierSeasonLabel ?? "", currentSeason);
+  const frontierCoverage = flightState?.frontierCoverageBySeason?.[flightState.frontierSeasonLabel ?? ""];
   const headlines = newsState?.headlines ?? [];
   const stock = stockState?.snapshot ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
   const stockHeadlines = stockState?.headlines ?? { status: "error" as const, message: "Not yet loaded — press Refresh analysis" };
@@ -216,9 +221,12 @@ export default async function PersonalPage() {
         <p>Travel window: {selectedBreak.departureDate} – {selectedBreak.returnDate}</p>
         <p>Trips of 3–7 nights, with departure and return inside this break. Lowest found on up to 5 sampled date pairs, not every date in the window.</p>
         {holidayRule ? <p>{holidayRule}</p> : null}
+        {overlapNights !== null && overlapNights < 3 ? <p>This shared no-school overlap is only {overlapNights} night{overlapNights === 1 ? "" : "s"}, so no 3–7 night trips fit without missing school.</p> : null}
+        {selectedBreak.label === "Summer Break" ? <p>Shared summer starts May 22. The July 9 end is provisional; fall 2027 return dates are not verified.</p> : null}
         {coverage?.incomplete ? <p>Some sampled dates failed; showing lowest found from the rest.</p> : null}
       </div>
       <section aria-labelledby="anywhere-heading">
+        <form action={refreshAnywhere} className="mb-4"><RefreshButton label="Refresh cheapest flights" /></form>
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
           <div>
@@ -227,6 +235,7 @@ export default async function PersonalPage() {
           </div>
         </div>
         <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {anywhereBanner ? <p className="mb-4 text-sm font-medium text-red-700">{anywhereBanner}</p> : null}
           {anywhere.status === "ok" ? (
             anywhere.value.length > 0 ? (
               <div className="space-y-8">
@@ -259,7 +268,7 @@ export default async function PersonalPage() {
                   </section>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">{coverage?.totalPairs === 0 ? "No remaining 3–7 night trips in this travel window." : "No qualifying 3–7 night trips found for the sampled dates."}</p>
+            ) : <p className="text-sm text-muted">{eligiblePairCount === 0 ? "No remaining 3–7 night trips in this travel window." : "No qualifying 3–7 night trips found for the sampled dates."}</p>
           ) : <p className="text-sm text-muted">{anywhere.message}. SerpApi resets {nextSerpApiReset(now, serpApiRenewalDay)}.</p>}
         </section>
       </section>
@@ -309,15 +318,15 @@ export default async function PersonalPage() {
         <div className="mb-6 flex items-center gap-3">
           <Plane className="text-accent" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Dallas · Frontier deals</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Economy · 1 adult · Frontier only</p>
             <h2 id="frontier-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">Frontier from Dallas</h2>
-            <p className="mt-1 text-sm text-muted">
-              <a href={FRONTIER_DEALS_URL} target="_blank" rel="noreferrer" className="font-medium text-accent hover:underline">Frontier deals board</a>
-            </p>
+            <p className="mt-1 text-sm text-muted">Lowest found on sampled Frontier-only Google Flights combinations, not every destination or date. Up to {FRONTIER_COMBO_BATCH} route/date combinations per refresh, {FRONTIER_MAX_REQUESTS} request cap. Chicago ORD and MDW stay in the rotation. Return fares are confirmed from sampled outbound tokens, not every Frontier outbound.</p>
           </div>
         </div>
         <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
           {frontierBanner ? <p className="mb-4 text-sm font-medium text-red-700">{frontierBanner}</p> : null}
+          {frontierCoverage?.incomplete ? <p className="mb-4 text-sm text-muted">Some Frontier searches failed; showing lowest found from the rest.</p> : null}
+          {frontierCoverage?.limitedOutboundTokens ? <p className="mb-4 text-sm text-muted">Round-trip fares are from sampled Frontier outbound options, not every outbound token.</p> : null}
           {frontier.status === "ok" ? (
             frontier.value.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -325,7 +334,7 @@ export default async function PersonalPage() {
                   <section key={`${flight.origin}-${flight.airportCode}-${flight.departureDate}-${flight.amount}`} className="rounded-[1.5rem] border border-line p-5">
                     <p className="text-sm font-semibold text-accent">{flight.origin} → {flight.airportCode}</p>
                     <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{flight.destination}</h4>
-                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} {flight.tripType === "one-way" ? "one-way" : "round trip"}</p>
+                    <p className="mt-5 font-serif text-3xl font-semibold text-ink">${flight.amount.toLocaleString()} round trip</p>
                     {flight.durationMinutes !== null && flight.stops !== null ? (
                       <p className="mt-2 text-sm text-muted">{durationLabel(flight.durationMinutes)} flight time · {flight.stops === 0 ? "nonstop" : `${flight.stops} stop${flight.stops === 1 ? "" : "s"}`}</p>
                     ) : null}
@@ -333,7 +342,7 @@ export default async function PersonalPage() {
                     {holidayMark(flight.departureDate, flight.returnDate, currentSeason) ? <p className="mt-1 text-sm text-muted">{holidayMark(flight.departureDate, flight.returnDate, currentSeason)}</p> : null}
                     <PurchaseMethodEstimate input={{
                       cashAmount: flight.amount,
-                      tripType: flight.tripType === "one-way" ? "one-way" : "round-trip",
+                      tripType: "round-trip",
                       origin: flight.origin,
                       destination: flight.airportCode,
                       airlineIdentity: flight.airlineIdentity,
@@ -342,7 +351,7 @@ export default async function PersonalPage() {
                   </section>
                 ))}
               </div>
-            ) : <p className="text-sm text-muted">No advertised Frontier round trips fit this 3–7 night window. This is not a complete Frontier search.</p>
+            ) : <p className="text-sm text-muted">No qualifying Frontier round trips found for the sampled dates and destinations.</p>
           ) : <p className="text-sm text-muted">{frontier.message}.</p>}
         </section>
       </section>

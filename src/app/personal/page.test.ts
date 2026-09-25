@@ -47,10 +47,21 @@ test("explains travel windows, sampled lowest-found results, and qualifying Fron
   expect(page).toContain("Lowest found on up to 5 sampled date pairs");
   expect(page).toContain("tripDateLine");
   expect(page).toContain("holidayMark");
-  expect(page).toContain("No advertised Frontier round trips fit this 3–7 night window");
+  expect(page).toContain("Refresh cheapest flights");
+  expect(page.indexOf("refreshAnywhere")).toBeGreaterThan(page.indexOf("SeasonSelect"));
+  expect(page.indexOf("refreshAnywhere")).toBeLessThan(page.indexOf('id="anywhere-heading"'));
+  expect(page).toContain("No qualifying Frontier round trips found for the sampled dates and destinations");
   expect(page).toContain("presentFlightState");
   expect(page).toContain("export const maxDuration = 60");
-  expect(page).toContain("FRONTIER_DEALS_URL");
+  expect(page).not.toContain("FRONTIER_DEALS_URL");
+  expect(page).not.toContain("flyfrontier.com");
+  expect(page).toContain("Frontier-only Google Flights");
+  expect(page).toContain("sampled outbound tokens");
+  expect(page).toContain("sampled Frontier outbound options");
+  expect(page).not.toContain("because of the request budget");
+  expect(page).toContain("shared no-school overlap");
+  expect(page).toContain("fall 2027 return dates are not verified");
+  expect(page).not.toContain("until the 2027");
 });
 
 test("adds a purchase-method estimate on every flight card group and shows cash-only points-row prices", async () => {

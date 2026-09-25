@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   writeSchedulePhotoState: vi.fn(),
   refreshFlightState: vi.fn(),
   refreshAnywhereSeason: vi.fn(),
+  selectAnywhereSeason: vi.fn(),
   refreshPointsSeason: vi.fn(),
   refreshFrontierSeason: vi.fn(),
   refreshNewsState: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock("@/lib/dashboard/flight-refresh", () => ({
   refreshAnywhereSeason: mocks.refreshAnywhereSeason,
   refreshPointsSeason: mocks.refreshPointsSeason,
   refreshFrontierSeason: mocks.refreshFrontierSeason,
+  selectAnywhereSeason: mocks.selectAnywhereSeason,
 }));
 
 vi.mock("@/lib/dashboard/news-refresh", () => ({ refreshNewsState: mocks.refreshNewsState }));
@@ -40,7 +42,7 @@ vi.mock("next/cache", () => ({
   revalidateTag: mocks.revalidateTag,
 }));
 
-import { refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis, setAnywhereSeason, uploadSchedulePhoto } from "./actions";
+import { refreshAnywhere, refreshFrontier, refreshNews, refreshPoints, refreshStockAnalysis, setAnywhereSeason, uploadSchedulePhoto } from "./actions";
 
 const originalKvUrl = process.env.KV_REST_API_URL;
 const originalBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -145,13 +147,32 @@ test("keeps the first uploaded photo without deleting a nonexistent previous blo
   expect(mocks.del).not.toHaveBeenCalled();
 });
 
-test("refreshes only the submitted anywhere season and revalidates the personal page", async () => {
+test("selects a season without searching and revalidates the personal page", async () => {
+  mocks.selectAnywhereSeason.mockResolvedValue({ ok: true });
   const formData = new FormData();
   formData.set("season", "Winter Break");
 
-  await setAnywhereSeason(formData);
+  await expect(setAnywhereSeason({ ok: true }, formData)).resolves.toEqual({ ok: true });
 
-  expect(mocks.refreshAnywhereSeason).toHaveBeenCalledWith("Winter Break");
+  expect(mocks.selectAnywhereSeason).toHaveBeenCalledWith("Winter Break");
+  expect(mocks.refreshAnywhereSeason).not.toHaveBeenCalled();
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
+});
+
+test("does not claim a season change succeeded when the lock is held", async () => {
+  mocks.selectAnywhereSeason.mockResolvedValue({ ok: false, reason: "refresh already in progress" });
+  const formData = new FormData();
+  formData.set("season", "Winter Break");
+
+  await expect(setAnywhereSeason({ ok: true }, formData)).resolves.toEqual({ ok: false, reason: "refresh already in progress" });
+  expect(mocks.revalidatePath).not.toHaveBeenCalled();
+});
+
+test("explicit anywhere refresh searches the selected season", async () => {
+  await refreshAnywhere();
+
+  expect(mocks.refreshAnywhereSeason).toHaveBeenCalledWith("");
+  expect(mocks.selectAnywhereSeason).not.toHaveBeenCalled();
   expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
 });
 

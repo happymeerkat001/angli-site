@@ -179,6 +179,14 @@ export function orderTripPairsForSearch(pairs: TripDatePair[], schoolBreak: Scho
   ]);
 }
 
+export function selectRotatedBatch<T>(items: T[], cursor: number, limit: number): { batch: T[]; nextCursor: number } {
+  if (items.length === 0) return { batch: [], nextCursor: 0 };
+  const start = cursor >= items.length || cursor < 0 ? 0 : cursor;
+  const batch = items.slice(start, start + limit);
+  const next = start + batch.length;
+  return { batch, nextCursor: next >= items.length ? 0 : next };
+}
+
 export function selectSearchBatch(
   orderedPairs: TripDatePair[],
   cursor: number,

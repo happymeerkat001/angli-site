@@ -27,7 +27,12 @@ const fareSearchWindow: FareWindow = {
   returnDate: fareSearch.returnDate,
 };
 
-export function serpApiFlightsUrl(route: FlightSearchRoute, apiKey: string, window: FareWindow) {
+export function serpApiFlightsUrl(
+  route: FlightSearchRoute,
+  apiKey: string,
+  window: FareWindow,
+  extra?: { includeAirlines?: string; departureToken?: string },
+) {
   const params = new URLSearchParams({
     engine: "google_flights",
     departure_id: route.origin,
@@ -41,6 +46,8 @@ export function serpApiFlightsUrl(route: FlightSearchRoute, apiKey: string, wind
     hl: "en",
     api_key: apiKey,
   });
+  if (extra?.includeAirlines) params.set("include_airlines", extra.includeAirlines);
+  if (extra?.departureToken) params.set("departure_token", extra.departureToken);
 
   return `https://serpapi.com/search.json?${params.toString()}`;
 }

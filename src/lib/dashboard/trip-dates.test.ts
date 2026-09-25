@@ -7,6 +7,7 @@ import {
   nightsBetween,
   orderTripPairsForSearch,
   SEARCH_BATCH_SIZE,
+  selectRotatedBatch,
   selectSearchBatch,
   tripDatePolicyFingerprint,
   tripFitsPolicy,
@@ -19,9 +20,9 @@ const spring = schoolBreaks[3];
 const summer = schoolBreaks[4];
 
 test("accepts exactly 3 and 7 nights and rejects 2 and 8", () => {
-  expect(tripFitsPolicy({ departureDate: "2026-10-10", returnDate: "2026-10-13" }, fall)).toBe(true);
+  expect(tripFitsPolicy({ departureDate: "2027-03-13", returnDate: "2027-03-16" }, spring)).toBe(true);
   expect(tripFitsPolicy({ departureDate: "2026-12-25", returnDate: "2027-01-01" }, winter)).toBe(true);
-  expect(nightsBetween("2026-10-10", "2026-10-13")).toBe(3);
+  expect(nightsBetween("2027-03-13", "2027-03-16")).toBe(3);
   expect(nightsBetween("2026-12-25", "2027-01-01")).toBe(7);
   expect(tripFitsPolicy({ departureDate: "2027-03-13", returnDate: "2027-03-15" }, spring)).toBe(false);
   expect(tripFitsPolicy({ departureDate: "2027-03-13", returnDate: "2027-03-21" }, spring)).toBe(false);
@@ -52,10 +53,9 @@ test("includes the seven-night two-holiday winter candidate", () => {
   expect(holidayInclusionLabel(winter.holidays)).toBe("Includes Christmas and New Year's");
 });
 
-test("fall Oct 10-13 yields exactly one valid three-night pair", () => {
-  expect(listValidTripPairs(fall, "2026-09-11")).toEqual([
-    { departureDate: "2026-10-10", returnDate: "2026-10-13", nights: 3 },
-  ]);
+test("shared fall Oct 10-12 is two nights and has no eligible 3-night trips", () => {
+  expect(nightsBetween("2026-10-10", "2026-10-12")).toBe(2);
+  expect(listValidTripPairs(fall, "2026-09-11")).toEqual([]);
 });
 
 test("uses strict calendar arithmetic across years and leap days", () => {
@@ -78,11 +78,12 @@ test("uses strict calendar arithmetic across years and leap days", () => {
 
 test("handles ongoing and expired windows without inventing whole-summer itineraries", () => {
   expect(listValidTripPairs(fall, "2026-10-11")).toEqual([]);
-  expect(listValidTripPairs(winter, "2027-01-07")).toEqual([]);
+  expect(listValidTripPairs(winter, "2027-01-05")).toEqual([]);
   const remaining = listValidTripPairs(winter, "2026-12-26");
   expect(remaining.every((pair) => pair.departureDate >= "2026-12-26")).toBe(true);
   expect(remaining.some((pair) => pair.departureDate <= "2027-01-01" && pair.returnDate >= "2027-01-01")).toBe(true);
   expect(listValidTripPairs(summer, "2027-01-01").every((pair) => pair.nights >= 3 && pair.nights <= 7)).toBe(true);
+  expect(listValidTripPairs(summer, "2027-01-01").some((pair) => pair.departureDate === "2027-05-22")).toBe(true);
   expect(listValidTripPairs(summer, "2027-01-01").some((pair) => pair.departureDate === "2027-06-18" && pair.returnDate === "2027-07-09")).toBe(false);
 });
 
@@ -118,6 +119,13 @@ test("distributes other-season first batches across durations and rotates until 
   expect(seen.size).toBe(ordered.length);
   expect(wrapped).toBe(true);
   expect(selectSearchBatch(ordered, ordered.length).batch).toEqual(selectSearchBatch(ordered, 0).batch);
+});
+
+test("rotates a destination list independently of date batches", () => {
+  const first = selectRotatedBatch(["ORD", "MDW", "DEN", "LAS"], 0, 2);
+  expect(first).toEqual({ batch: ["ORD", "MDW"], nextCursor: 2 });
+  expect(selectRotatedBatch(["ORD", "MDW", "DEN", "LAS"], first.nextCursor, 2).batch).toEqual(["DEN", "LAS"]);
+  expect(selectRotatedBatch(["ORD", "MDW"], 2, 2).batch).toEqual(["ORD", "MDW"]);
 });
 
 test("builds a stable policy fingerprint from windows, holidays, and night bounds", () => {

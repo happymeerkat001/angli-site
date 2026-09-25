@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { fareSearch, flightRoutes, schoolBreaks } from "./config";
+import { fareSearch, flightRoutes } from "./config";
 import { buildFlexCandidates } from "./flex-dates";
 import { getFlightDashboard, selectLowestEligibleFlight, serpApiFlightsUrl } from "./flights";
 
@@ -26,7 +26,11 @@ test("retains the itinerary duration when SerpApi provides it", () => {
 });
 
 test("requests the configured 2027 round-trip search dates", () => {
-  const url = new URL(serpApiFlightsUrl(flightRoutes[0], "test-key", schoolBreaks[4]));
+  const url = new URL(serpApiFlightsUrl(flightRoutes[0], "test-key", {
+    label: "Summer 2027",
+    departureDate: fareSearch.departureDate,
+    returnDate: fareSearch.returnDate,
+  }));
 
   expect(url.searchParams.get("outbound_date")).toBe("2027-06-18");
   expect(url.searchParams.get("return_date")).toBe("2027-07-09");

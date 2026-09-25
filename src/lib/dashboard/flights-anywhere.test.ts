@@ -150,15 +150,15 @@ test("groups each break's explore results with its California fifth slot", async
   });
 
   const result = await getAnywhereDashboard({
-    schoolBreak: schoolBreaks[0],
-    datePairs: [{ departureDate: "2026-10-10", returnDate: "2026-10-13" }],
+    schoolBreak: schoolBreaks[3],
+    datePairs: [{ departureDate: "2027-03-13", returnDate: "2027-03-16" }],
     now: new Date("2026-07-24T00:00:00.000Z"),
   });
 
   expect(result.status).toBe("ok");
   if (result.status !== "ok") throw new Error(result.message);
-  expect(result.value.sections.map(({ windowLabel }) => windowLabel)).toEqual(["Fall Break"]);
-  expect(result.value.sections[0]).toMatchObject({ departureDate: "2026-10-10", returnDate: "2026-10-13" });
+  expect(result.value.sections.map(({ windowLabel }) => windowLabel)).toEqual(["Spring Break"]);
+  expect(result.value.sections[0]).toMatchObject({ departureDate: "2027-03-13", returnDate: "2027-03-21" });
   expect(result.value.sections.every(({ options }) => options.length === 2)).toBe(true);
   expect(result.value.sections.every(({ options }) => options.at(-1)?.airportCode === "SFO")).toBe(true);
   expect(result.value.pile.map(({ airportCode }) => airportCode)).toEqual(["EXP"]);
@@ -172,7 +172,7 @@ test("returns no sections without fetching when no windows are selected", async 
   await expect(getAnywhereDashboard({ schoolBreak: schoolBreaks[0], datePairs: [] })).resolves.toEqual({
     status: "ok",
     value: {
-      sections: [{ windowLabel: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13", options: [] }],
+      sections: [{ windowLabel: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-12", options: [] }],
       pile: [],
       incomplete: false,
       timedOut: false,

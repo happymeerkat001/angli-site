@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "generate:insights": "tsx scripts/generate-insights.ts"
+    "generate:insights": "tsx scripts/generate-insights.ts",
+    "reauth:calendar": "tsx scripts/reauth-google-calendar.ts"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",

@@ -1,7 +1,8 @@
 import { kv } from "@vercel/kv";
 import { schoolBreaks } from "./config";
+import { FRONTIER_SOURCE_VERSION } from "./flights-frontier";
 import { tripDatePolicyFingerprint } from "./trip-dates";
-import type { AnywhereFlightOption, AnywhereWindowSection, FlightSnapshot, FrontierDealOption, PointsFlightOption, SeasonSearchCursor, SourceResult } from "./types";
+import type { AnywhereFlightOption, AnywhereWindowSection, FlightSnapshot, FrontierDealOption, FrontierSearchCursor, PointsFlightOption, SeasonSearchCursor, SourceResult } from "./types";
 
 export type FlightStoreState = {
   flights: FlightSnapshot[];
@@ -17,6 +18,8 @@ export type FlightStoreState = {
   frontier: SourceResult<FrontierDealOption[]>;
   frontierSeasonLabel: string;
   frontierFetchedAt: string;
+  frontierSourceVersion: string;
+  frontierCoverageBySeason: Record<string, FrontierSearchCursor>;
   policyFingerprint: string;
   coverageBySeason: Record<string, SeasonSearchCursor>;
 };
@@ -30,7 +33,7 @@ export const FETCH_TIMEOUT_MS = 12_000;
 
 const RETIRED_ANYWHERE = "Saved fares used an older date policy — press Refresh flights";
 const RETIRED_POINTS = "Saved points fares used an older date policy — press Refresh points";
-const RETIRED_FRONTIER = "Saved Frontier deals used an older date policy — press Refresh Frontier";
+const RETIRED_FRONTIER = "Saved Frontier results used an older search source — press Refresh Frontier";
 const emptyAnywhere: SourceResult<AnywhereWindowSection[]> = { status: "error", message: "Flight data not loaded yet — press Refresh flights" };
 const emptyPoints: SourceResult<PointsFlightOption[]> = { status: "error", message: "Not yet loaded — press Refresh points" };
 const emptyFrontier: SourceResult<FrontierDealOption[]> = { status: "error", message: "Not yet loaded — press Refresh Frontier" };
@@ -58,6 +61,8 @@ export function mergeFlightState(
     frontier: patch.frontier ?? previous?.frontier ?? emptyFrontier,
     frontierSeasonLabel: patch.frontierSeasonLabel ?? previous?.frontierSeasonLabel ?? "",
     frontierFetchedAt: patch.frontierFetchedAt ?? previous?.frontierFetchedAt ?? "",
+    frontierSourceVersion: patch.frontierSourceVersion ?? previous?.frontierSourceVersion ?? "",
+    frontierCoverageBySeason: patch.frontierCoverageBySeason ?? previous?.frontierCoverageBySeason ?? {},
     policyFingerprint: patch.policyFingerprint ?? previous?.policyFingerprint ?? "",
     coverageBySeason: patch.coverageBySeason ?? previous?.coverageBySeason ?? {},
   };
@@ -65,18 +70,28 @@ export function mergeFlightState(
 
 export function presentFlightState(state: FlightStoreState | null, fingerprint = currentPolicyFingerprint()): FlightStoreState | null {
   if (!state) return null;
-  if (state.policyFingerprint === fingerprint) return state;
-  return {
+  const datePolicyOk = state.policyFingerprint === fingerprint;
+  const next = datePolicyOk ? state : {
     ...state,
-    anywhere: { status: "error", message: RETIRED_ANYWHERE },
+    anywhere: { status: "error" as const, message: RETIRED_ANYWHERE },
     anywherePile: [],
     anywherePileSeasonLabel: "",
     anywherePileFingerprint: "",
-    points: { status: "error", message: RETIRED_POINTS },
+    points: { status: "error" as const, message: RETIRED_POINTS },
     pointsSeasonLabel: "",
+    frontier: { status: "error" as const, message: RETIRED_FRONTIER },
+    frontierSeasonLabel: "",
+    frontierFetchedAt: "",
+    frontierCoverageBySeason: {},
+    coverageBySeason: {},
+  };
+  if ((next.frontierSourceVersion ?? "") === FRONTIER_SOURCE_VERSION) return next;
+  return {
+    ...next,
     frontier: { status: "error", message: RETIRED_FRONTIER },
     frontierSeasonLabel: "",
-    coverageBySeason: {},
+    frontierFetchedAt: "",
+    frontierCoverageBySeason: {},
   };
 }
 

@@ -22,6 +22,7 @@ import {
   releaseRefreshLock,
   writeFlightState,
 } from "./flight-store";
+import { FRONTIER_SOURCE_VERSION } from "./flights-frontier";
 import { tripDatePolicyFingerprint } from "./trip-dates";
 import type { FlightStoreState } from "./flight-store";
 
@@ -41,6 +42,7 @@ function state(overrides: Partial<FlightStoreState> = {}): FlightStoreState {
     pointsSeasonLabel: "Fall Break",
     frontier: { status: "ok", value: [] },
     frontierSeasonLabel: "Fall Break",
+    frontierSourceVersion: FRONTIER_SOURCE_VERSION,
     policyFingerprint: fingerprint,
     coverageBySeason: { "Fall Break": { cursor: 0, lastBatch: [], totalPairs: 1, incomplete: false, timedOut: false, failedSearches: 0 } },
     ...overrides,
@@ -73,6 +75,22 @@ test("retires nonmatching caches without changing international fares or relabel
 test("keeps same-policy fares with their true season and timestamp", () => {
   const previous = state();
   expect(presentFlightState(previous, fingerprint)).toEqual(previous);
+});
+
+test("retires only obsolete Frontier cache when the date policy still matches", () => {
+  const previous = state({
+    frontier: { status: "ok", value: [{ origin: "DFW", airportCode: "DEN", destination: "Denver", amount: 88, currency: "USD", durationMinutes: null, stops: null, departureDate: "2026-12-25", returnDate: "2027-01-01", tripType: "round-trip", windowLabel: "Winter Break" }] },
+    frontierSeasonLabel: "Winter Break",
+    frontierFetchedAt: "2026-09-01T00:00:00.000Z",
+    frontierSourceVersion: "",
+  });
+  const presented = presentFlightState(previous, fingerprint);
+  expect(presented?.anywhere.status).toBe("ok");
+  expect(presented?.points.status).toBe("ok");
+  expect(presented?.anywhereSeasonLabel).toBe("Fall Break");
+  expect(presented?.frontier).toEqual({ status: "error", message: "Saved Frontier results used an older search source — press Refresh Frontier" });
+  expect(presented?.frontierSeasonLabel).toBe("");
+  expect(presented?.frontierFetchedAt).toBe("");
 });
 
 test("reuses a points pile only when season and fingerprint match", () => {

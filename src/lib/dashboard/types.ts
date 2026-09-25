@@ -92,6 +92,25 @@ export type SeasonSearchCursor = {
   failedSearches: number;
 };
 
+export type FrontierSearchCombo = {
+  destination: { destination: string; label: string };
+  pair: Pick<TripDatePair, "departureDate" | "returnDate">;
+};
+
+export type FrontierSearchCursor = {
+  cursor: number;
+  lastBatch: {
+    destinations: string[];
+    datePairs: Array<{ departureDate: string; returnDate: string }>;
+  };
+  totalCombos: number;
+  incomplete: boolean;
+  timedOut: boolean;
+  failedSearches: number;
+  requestCount: number;
+  limitedOutboundTokens: boolean;
+};
+
 export type AirlineCodeSource = "airline_code" | "flight_number" | "logo" | "name";
 
 export type AirlineOperatorStatus = "verified-operating" | "reported-marketing" | "codeshare-unverified" | "unknown";
@@ -185,6 +204,17 @@ export type FrontierDealOption = {
   tripType: FrontierTripType;
   windowLabel: string;
   airlineIdentity?: FlightAirlineIdentity;
+};
+
+export type FrontierSearchValue = {
+  options: FrontierDealOption[];
+  incomplete: boolean;
+  timedOut: boolean;
+  failedSearches: number;
+  requestCount: number;
+  searchedPairs: Array<{ departureDate: string; returnDate: string }>;
+  searchedDestinations: string[];
+  limitedOutboundTokens: boolean;
 };
 
 export type TextInsightEntry = {

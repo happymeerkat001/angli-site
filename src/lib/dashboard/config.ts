@@ -42,7 +42,11 @@ export const flightRoutes: FlightRoute[] = [
 ];
 
 export const schoolBreaks: SchoolBreak[] = [
-  { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-13", holidayCoverage: "none", holidays: [] },
+  // Shared no-school overlap of MCA 2026–27 and Imagine North Texas 2026–27. Imagine does not follow McKinney ISD.
+  // MCA: https://www.mckinneychristian.org/uploads/files/mca-2026-2027-school-calendar-1.pdf
+  // Imagine: https://www.imaginenorthtexas.org/General_Documents/Calendar/IIANT_Calendar_2026_2027_v3_.pdf
+  // Fall: Imagine students resume Oct 13; MCA is off Oct 12–13. Shared travel window is Oct 10–12 (weekend + Oct 12).
+  { label: "Fall Break", departureDate: "2026-10-10", returnDate: "2026-10-12", holidayCoverage: "none", holidays: [] },
   {
     label: "Thanksgiving Break",
     departureDate: "2026-11-21",
@@ -51,9 +55,10 @@ export const schoolBreaks: SchoolBreak[] = [
     holidays: [{ id: "thanksgiving", date: "2026-11-26", label: "Thanksgiving" }],
   },
   {
+    // MCA resumes Jan 6; Imagine students resume Jan 5. Shared last day both students are off is Jan 4.
     label: "Winter Break",
     departureDate: "2026-12-19",
-    returnDate: "2027-01-06",
+    returnDate: "2027-01-04",
     holidayCoverage: "any",
     holidays: [
       { id: "christmas", date: "2026-12-25", label: "Christmas" },
@@ -61,8 +66,9 @@ export const schoolBreaks: SchoolBreak[] = [
     ],
   },
   { label: "Spring Break", departureDate: "2027-03-13", returnDate: "2027-03-21", holidayCoverage: "none", holidays: [] },
-  // Search the configured mid-summer window. A prior note mentioned 2027-05-28–2027-08-12 as the full break; those dates are not verified from the school calendar, so they are not used as the search window.
-  { label: "Summer Break", departureDate: "2027-06-18", returnDate: "2027-07-09", holidayCoverage: "none", holidays: [] },
+  // Shared summer start is May 22 (MCA last day May 21; Imagine last student day May 20, May 21 staff-only).
+  // Official calendars checked 2026-09-16 did not verify fall 2027 student return dates; keep 2027-07-09 as a provisional search end and do not invent August.
+  { label: "Summer Break", departureDate: "2027-05-22", returnDate: "2027-07-09", holidayCoverage: "none", holidays: [] },
 ];
 
 export const californiaAirports: CaliforniaAirport[] = [
@@ -79,8 +85,17 @@ export const partnerHubAirports = [
   "MDW", "MCO", "MSP", "NRT", "ORD", "PHX", "SEA", "SFO", "SLC", "YVR", "YYZ",
 ] as const;
 
-export const FRONTIER_DEALS_URL = "https://flights.flyfrontier.com/en/flight-deals";
-export const frontierDallasOrigins = ["DFW", "DAL"] as const;
+export const frontierOrigin = "DFW" as const;
+export const frontierSearchDestinations = [
+  { destination: "ORD", label: "Chicago O'Hare" },
+  { destination: "MDW", label: "Chicago Midway" },
+  { destination: "DEN", label: "Denver" },
+  { destination: "LAS", label: "Las Vegas" },
+  { destination: "MCO", label: "Orlando" },
+  { destination: "PHX", label: "Phoenix" },
+  { destination: "ATL", label: "Atlanta" },
+  { destination: "MIA", label: "Miami" },
+] as const;
 
 export const fareSearch = {
   departureDate: "2027-06-18",
