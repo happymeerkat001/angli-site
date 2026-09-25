@@ -1,7 +1,8 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
+import * as insightSources from "./insight-sources";
 import { collectInsightSourceFiles, shouldExcludeInsightSourcePath } from "./insight-sources";
 
 const temporaryVaults: string[] = [];
@@ -57,6 +58,53 @@ test("skips curated allowed files that do not exist", async () => {
 
   const files = await collectInsightSourceFiles(vault);
   expect(files).toEqual([readDoneNote]);
+});
+
+type InsightSourceEntry = {
+  id: string;
+  title: string;
+  source: string;
+};
+
+function isInsightSourceEntry(value: unknown): value is InsightSourceEntry {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Record<string, unknown>;
+  return typeof entry.id === "string" && typeof entry.title === "string" && typeof entry.source === "string";
+}
+
+function stringList(sourceText: string, name: string) {
+  const match = sourceText.match(new RegExp(`const ${name} = \\[([\\s\\S]*?)\\];`));
+  if (!match) throw new Error(`Missing ${name} catalog in insight-sources.ts`);
+  return [...match[1].matchAll(/"([^"]+)"/g)].map((found) => found[1]);
+}
+
+function entryFromPath(path: string): InsightSourceEntry {
+  const title = path.split("/").at(-1)?.replace(/\.md$/i, "").trim() ?? "";
+  return { id: path, title, source: path };
+}
+
+function catalogEntries(sourceText: string): InsightSourceEntry[] {
+  const fromModule = Object.values(insightSources).flatMap((value) => {
+    if (isInsightSourceEntry(value)) return [value];
+    return Array.isArray(value) ? value.filter(isInsightSourceEntry) : [];
+  });
+  const fromAllowlists = [...stringList(sourceText, "ALLOWED_ROOTS"), ...stringList(sourceText, "ALLOWED_FILES")].map(entryFromPath);
+  const seen = new Set(fromModule.map((entry) => entry.id));
+  return [...fromModule, ...fromAllowlists.filter((entry) => !seen.has(entry.id))];
+}
+
+test("every insight source entry has a non-empty title and source and unique ids and titles", async () => {
+  const sourceText = await readFile(new URL("./insight-sources.ts", import.meta.url), "utf8");
+  const entries = catalogEntries(sourceText);
+
+  expect(entries.length).toBeGreaterThan(0);
+  for (const entry of entries) {
+    expect(entry.id.trim()).not.toBe("");
+    expect(entry.title.trim()).not.toBe("");
+    expect(entry.source.trim()).not.toBe("");
+  }
+  expect(new Set(entries.map((entry) => entry.id)).size).toBe(entries.length);
+  expect(new Set(entries.map((entry) => entry.title)).size).toBe(entries.length);
 });
 
 test("identifies only the explicitly excluded source paths", () => {
