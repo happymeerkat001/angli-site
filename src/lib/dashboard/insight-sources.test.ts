@@ -10,6 +10,39 @@ afterEach(async () => {
   await Promise.all(temporaryVaults.splice(0).map((vault) => rm(vault, { force: true, recursive: true })));
 });
 
+test("collects exactly the allowed Markdown sources without duplicate paths", async () => {
+  const vault = await mkdtemp(join(tmpdir(), "insight-sources-"));
+  temporaryVaults.push(vault);
+  const allowed = [
+    "z.Ingestion/Clippings/nested/note.md",
+    "z.Ingestion/Official Docs/note.md",
+    "z.Ingestion/People/note.md",
+    "z.Ingestion/personal.Spaces/Real Estate/note.md",
+    "z.Ingestion/read.done/note.md",
+    "z.Ingestion/Hedy-AI/note.md",
+    "z.Ingestion/Matt pocock 5 to learn.md",
+  ].map((path) => join(vault, path));
+  const excluded = [
+    "z.Ingestion/Clippings/nested/attachment.txt",
+    "z.Ingestion/personal.Spaces/Real Estate/Manus/draft.md",
+    "z.Ingestion/personal.Spaces/Real Estate/$$$/private.md",
+    "z.Ingestion/Hedy-AI/TRANSCRIPT 2026-05-19.md",
+    "z.Ingestion/Hedy-AI/transcript 2026-05-19.md",
+    "z.Ingestion/personal.Sources/private.md",
+    "z.Ingestion/uncurated.md",
+    "outside.md",
+  ].map((path) => join(vault, path));
+
+  await Promise.all([...allowed, ...excluded].map(async (file) => {
+    await mkdir(join(file, ".."), { recursive: true });
+    await writeFile(file, "# Test\n==An insight worth keeping==\n");
+  }));
+
+  const files = await collectInsightSourceFiles(vault);
+  expect(files.toSorted()).toEqual(allowed.toSorted());
+  expect(new Set(files).size).toBe(files.length);
+});
+
 test("collects nested allowed notes and excludes Manus and Hedy transcripts", async () => {
   const vault = await mkdtemp(join(tmpdir(), "insight-sources-"));
   temporaryVaults.push(vault);
