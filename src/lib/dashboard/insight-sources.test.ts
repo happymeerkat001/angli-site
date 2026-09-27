@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -90,6 +90,29 @@ test("skips curated allowed files that do not exist", async () => {
 
   const files = await collectInsightSourceFiles(vault);
   expect(files).toEqual([readDoneNote]);
+});
+
+test("returns no duplicate paths when a symlinked folder reaches the same allowed note", async () => {
+  const vault = await mkdtemp(join(tmpdir(), "insight-sources-"));
+  temporaryVaults.push(vault);
+  const note = join(vault, "z.Ingestion", "personal.Spaces", "Real Estate", "idea.md");
+  const linkParent = join(vault, "z.Ingestion", "Clippings");
+  const link = join(linkParent, "Real Estate");
+
+  await mkdir(join(note, ".."), { recursive: true });
+  await mkdir(linkParent, { recursive: true });
+  await writeFile(note, "# Test\n==insight==");
+  // The walker treats directory symlinks as non-directories, so this second
+  // route to the same note is not collected.
+  await symlink(join(note, ".."), link, "dir");
+
+  const files = await collectInsightSourceFiles(vault);
+  const resolved = await Promise.all(files.map((file) => realpath(file)));
+
+  expect(files).toEqual([note]);
+  expect(new Set(files).size).toBe(files.length);
+  expect(new Set(resolved).size).toBe(resolved.length);
+  expect(files.some((file) => file.startsWith(link))).toBe(false);
 });
 
 test("identifies only the explicitly excluded source paths", () => {
