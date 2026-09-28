@@ -58,6 +58,24 @@ export const californiaAirports: CaliforniaAirport[] = [
 
 export const serpApiRenewalDay = 16;
 
+export const cruiseSearch = {
+  portCode: "GAL",
+  portName: "Galveston",
+  adults: 2,
+  flexDays: 2,
+  pointsCentsPerPoint: 1.5,
+  offersPerWindow: 4,
+} as const;
+
+export const cruiseLines = [
+  "Carnival",
+  "Royal Caribbean",
+  "Norwegian",
+  "MSC",
+  "Disney",
+  "Princess",
+] as const;
+
 export const fareSearch = {
   departureDate: "2027-06-18",
   returnDate: "2027-07-09",

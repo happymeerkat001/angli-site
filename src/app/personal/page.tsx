@@ -1,10 +1,11 @@
-import { CalendarDays, Lightbulb, Newspaper, Plane, TrendingUp } from "lucide-react";
+import { CalendarDays, Lightbulb, Newspaper, Plane, Ship, TrendingUp } from "lucide-react";
 import { getCalendarAgenda } from "@/lib/dashboard/calendar";
+import { readCruiseState } from "@/lib/dashboard/cruise-store";
 import { readFlightState } from "@/lib/dashboard/flight-store";
 import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { readStockState } from "@/lib/dashboard/stock-store";
-import { fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { cruiseLines, cruiseSearch, fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -13,7 +14,7 @@ import { SchedulePhotoCard } from "@/components/SchedulePhotoCard";
 import { SeasonSelect } from "@/components/SeasonSelect";
 import insights from "@/lib/dashboard/insights.generated.json";
 import type { InsightEntry } from "@/lib/dashboard/types";
-import { refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
+import { refreshCruises, refreshFlights, refreshNews, refreshStockAnalysis } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +35,10 @@ export default async function PersonalPage() {
   const now = new Date();
   const summerStartLooking = subtractMonths(fareSearch.departureDate, 8);
   const summerInWindow = isWithinLookaheadWindow(now, fareSearch.departureDate, 8);
-  const [agenda, flightState, schedulePhotoState, newsState, stockState] = await Promise.all([
+  const [agenda, flightState, cruiseState, schedulePhotoState, newsState, stockState] = await Promise.all([
     getCalendarAgenda(),
     readFlightState(),
+    readCruiseState(),
     readSchedulePhotoState(),
     readNewsState(),
     readStockState(),
@@ -191,6 +193,46 @@ export default async function PersonalPage() {
               </div>
             ) : <p className="text-sm text-muted">No nearby flights found for the school breaks.</p>
           ) : <p className="text-sm text-muted">{anywhere.message}. SerpApi resets {nextSerpApiReset(now, serpApiRenewalDay)}.</p>}
+        </section>
+      </section>
+
+      <section aria-labelledby="cruises-heading">
+        <form action={refreshCruises} className="mb-4"><RefreshButton label="Refresh cruises" /></form>
+        <p className="mb-4 text-sm text-muted">Last refreshed: {cruiseState ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(cruiseState.fetchedAt)) : "Not yet refreshed"}</p>
+        <p className="mb-4 text-sm text-muted">
+          Galveston round trips from {cruiseLines.join(", ")}, on the same school-break dates as the flights. A sailing can start or end up to {cruiseSearch.flexDays} days outside the break. Cash is the cheapest available cabin, per person, for two guests. Points are that same cash fare at {cruiseSearch.pointsCentsPerPoint}¢ per point. If one cruise line is unavailable, the others still show.
+        </p>
+        <div className="mb-6 flex items-center gap-3">
+          <Ship className="text-accent" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">Round trip · Galveston · per person</p>
+            <h2 id="cruises-heading" className="mt-1 font-serif text-3xl font-semibold text-ink">School-break cruises</h2>
+          </div>
+        </div>
+        <section className="rounded-[2rem] border border-line bg-card p-6 shadow-sm shadow-ink/5">
+          {cruiseState?.windows.status === "ok" ? (
+            <div className="space-y-8">
+              {cruiseState.windows.value.map((group) => (
+                <section key={group.windowLabel}>
+                  <h3 className="font-serif text-2xl font-semibold text-ink">{group.windowLabel}: {group.departureDate} – {group.returnDate}</h3>
+                  {group.offers.length > 0 ? (
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {group.offers.map((cruise) => (
+                        <a key={`${group.windowLabel}-${cruise.id}`} href={cruise.url} target="_blank" rel="noreferrer" className="rounded-[1.5rem] border border-line p-5 hover:border-accent">
+                          <p className="text-sm font-semibold text-accent">{cruise.line} · {cruise.departurePort}</p>
+                          <h4 className="mt-2 font-serif text-xl font-semibold text-ink">{cruise.title}</h4>
+                          <p className="mt-2 text-sm text-muted">{cruise.ship} · {cruise.nights}-day</p>
+                          <p className="mt-5 font-serif text-3xl font-semibold text-ink">${cruise.cashAmount.toLocaleString()} cash</p>
+                          <p className="mt-2 font-serif text-2xl font-semibold text-ink">{cruise.points.toLocaleString()} points</p>
+                          <p className="mt-2 text-sm text-muted">{cruise.departureDate} – {cruise.returnDate}</p>
+                        </a>
+                      ))}
+                    </div>
+                  ) : <p className="mt-4 text-sm text-muted">No Galveston cruises fit this break.</p>}
+                </section>
+              ))}
+            </div>
+          ) : <p className="text-sm text-muted">{cruiseState?.windows.status === "error" ? `${cruiseState.windows.message}.` : "Not yet loaded — press Refresh cruises."}</p>}
         </section>
       </section>
 
