@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, cruiseSearch, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
+import { californiaAirports, cruiseLines, cruiseSearch, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -46,6 +46,14 @@ test("configures Galveston cruise search on the same school breaks", () => {
     pointsCentsPerPoint: 1.5,
     offersPerWindow: 4,
   });
+  expect(cruiseLines).toEqual([
+    "Carnival",
+    "Royal Caribbean",
+    "Norwegian",
+    "MSC",
+    "Disney",
+    "Princess",
+  ]);
 });
 
 test("configures the monthly SerpApi renewal day", () => {

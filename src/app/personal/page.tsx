@@ -5,7 +5,7 @@ import { readFlightState } from "@/lib/dashboard/flight-store";
 import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { readStockState } from "@/lib/dashboard/stock-store";
-import { cruiseSearch, fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { cruiseLines, cruiseSearch, fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -200,7 +200,7 @@ export default async function PersonalPage() {
         <form action={refreshCruises} className="mb-4"><RefreshButton label="Refresh cruises" /></form>
         <p className="mb-4 text-sm text-muted">Last refreshed: {cruiseState ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(cruiseState.fetchedAt)) : "Not yet refreshed"}</p>
         <p className="mb-4 text-sm text-muted">
-          Galveston round trips only, on the same school-break dates as the flights. A sailing can start or end up to {cruiseSearch.flexDays} days outside the break. Cash is the cheapest available cabin, per person, for two guests. Points are that same cash fare at {cruiseSearch.pointsCentsPerPoint}¢ per point.
+          Galveston round trips from {cruiseLines.join(", ")}, on the same school-break dates as the flights. A sailing can start or end up to {cruiseSearch.flexDays} days outside the break. Cash is the cheapest available cabin, per person, for two guests. Points are that same cash fare at {cruiseSearch.pointsCentsPerPoint}¢ per point. If one cruise line is unavailable, the others still show.
         </p>
         <div className="mb-6 flex items-center gap-3">
           <Ship className="text-accent" aria-hidden="true" />

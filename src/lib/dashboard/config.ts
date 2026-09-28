@@ -67,6 +67,15 @@ export const cruiseSearch = {
   offersPerWindow: 4,
 } as const;
 
+export const cruiseLines = [
+  "Carnival",
+  "Royal Caribbean",
+  "Norwegian",
+  "MSC",
+  "Disney",
+  "Princess",
+] as const;
+
 export const fareSearch = {
   departureDate: "2027-06-18",
   returnDate: "2027-07-09",
