@@ -58,6 +58,10 @@ Vercel environment variables:
 - `GOOGLE_CALENDAR_IDS` (optional comma-separated override; otherwise all selected calendars are read)
 - `SERP_API_KEY` (SerpApi key for live Google Flights fares; without it every
   route falls back to "Live price unavailable today")
+- Cruise prices do not use that key. Refresh cruises calls Carnival's public
+  Galveston search (round trip, same school-break dates, ±2 days). No cruise
+  API key is stored in this repo. Points on each card are the cash fare
+  converted at 1.5¢ per point.
 - `BLOB_READ_WRITE_TOKEN` (Vercel Blob token for the private weekly schedule photo upload)
 - `STOCK_LLM_BASE_URL`, `STOCK_LLM_API_KEY`, `STOCK_LLM_MODEL` (optional OpenAI-compatible endpoint for the daily NVDA analysis)
 

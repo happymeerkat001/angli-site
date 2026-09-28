@@ -120,3 +120,26 @@ export type ImageInsightEntry = {
 };
 
 export type InsightEntry = TextInsightEntry | ImageInsightEntry;
+
+export type CruiseOffer = {
+  id: string;
+  line: string;
+  ship: string;
+  title: string;
+  departurePort: "Galveston";
+  departureDate: string;
+  returnDate: string;
+  nights: number;
+  cashAmount: number;
+  currency: "USD";
+  points: number;
+  url: string;
+  windowLabel: string;
+};
+
+export type CruiseWindowSection = {
+  windowLabel: string;
+  departureDate: string;
+  returnDate: string;
+  offers: CruiseOffer[];
+};

@@ -2,6 +2,7 @@
 
 import { del, put } from "@vercel/blob";
 import { revalidatePath } from "next/cache";
+import { refreshCruiseState } from "@/lib/dashboard/cruise-refresh";
 import { refreshAnywhereSeason, refreshFlightState } from "@/lib/dashboard/flight-refresh";
 import { refreshNewsState } from "@/lib/dashboard/news-refresh";
 import { readSchedulePhotoState, writeSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
@@ -35,6 +36,11 @@ export async function uploadSchedulePhoto(
 
 export async function refreshFlights() {
   await refreshFlightState();
+  revalidatePath("/personal");
+}
+
+export async function refreshCruises() {
+  await refreshCruiseState();
   revalidatePath("/personal");
 }
 

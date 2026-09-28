@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
+import { californiaAirports, cruiseSearch, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -34,6 +34,17 @@ test("configures the fixed Summer 2027 fare search", () => {
     returnDate: "2027-07-09",
     adults: 1,
     cabin: "ECONOMY",
+  });
+});
+
+test("configures Galveston cruise search on the same school breaks", () => {
+  expect(cruiseSearch).toEqual({
+    portCode: "GAL",
+    portName: "Galveston",
+    adults: 2,
+    flexDays: 2,
+    pointsCentsPerPoint: 1.5,
+    offersPerWindow: 4,
   });
 });
 
