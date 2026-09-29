@@ -3,6 +3,7 @@ import type { CruiseWindowSection, SourceResult } from "./types";
 
 export type CruiseStoreState = {
   windows: SourceResult<CruiseWindowSection[]>;
+  seasonLabel?: string;
   fetchedAt: string;
 };
 

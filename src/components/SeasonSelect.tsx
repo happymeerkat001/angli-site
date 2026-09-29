@@ -2,14 +2,25 @@
 
 import { useRef } from "react";
 import { useFormStatus } from "react-dom";
-import { setAnywhereSeason } from "@/app/personal/actions";
 
-function SeasonSelectControl({ currentSeason, onChange, seasons }: { currentSeason: string; onChange: () => void; seasons: string[] }) {
+function SeasonSelectControl({
+  currentSeason,
+  label,
+  onChange,
+  pendingLabel,
+  seasons,
+}: {
+  currentSeason: string;
+  label: string;
+  onChange: () => void;
+  pendingLabel: string;
+  seasons: string[];
+}) {
   const { pending } = useFormStatus();
 
   return (
     <label className="flex items-center gap-3 text-sm font-medium text-ink">
-      Season
+      {label}
       <select
         name="season"
         defaultValue={currentSeason}
@@ -19,17 +30,35 @@ function SeasonSelectControl({ currentSeason, onChange, seasons }: { currentSeas
       >
         {seasons.map((season) => <option key={season} value={season}>{season}</option>)}
       </select>
-      {pending ? <span className="text-muted" aria-live="polite">Refreshing…</span> : null}
+      {pending ? <span className="text-muted" aria-live="polite">{pendingLabel}</span> : null}
     </label>
   );
 }
 
-export function SeasonSelect({ currentSeason, seasons }: { currentSeason: string; seasons: string[] }) {
+export function SeasonSelect({
+  action,
+  currentSeason,
+  label = "Season",
+  pendingLabel = "Refreshing…",
+  seasons,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  currentSeason: string;
+  label?: string;
+  pendingLabel?: string;
+  seasons: string[];
+}) {
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form ref={formRef} action={setAnywhereSeason} className="mb-4">
-      <SeasonSelectControl currentSeason={currentSeason} onChange={() => formRef.current?.requestSubmit()} seasons={seasons} />
+    <form ref={formRef} action={action} className="mb-4">
+      <SeasonSelectControl
+        currentSeason={currentSeason}
+        label={label}
+        onChange={() => formRef.current?.requestSubmit()}
+        pendingLabel={pendingLabel}
+        seasons={seasons}
+      />
     </form>
   );
 }

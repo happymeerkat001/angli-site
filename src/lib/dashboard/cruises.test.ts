@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { schoolBreaks } from "./config";
 import { parseNorwegianItinerary, parsePrincessSailings, parseRoyalCruiseSearch } from "./cruise-lines";
-import { carnivalSearchUrl, cashToPoints, getCruiseDashboard, parseCarnivalItineraries, sailingFitsWindow, selectCruiseWindows, type ParsedCruiseSailing } from "./cruises";
+import { carnivalSearchUrl, cashToPoints, getCruiseDashboard, parseCarnivalItineraries, sailingDepartsInSeason, sailingFitsWindow, selectCruiseWindows, type ParsedCruiseSailing } from "./cruises";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -33,6 +33,19 @@ test("allows a Galveston sailing that overruns a school break by up to two days"
 
 test("converts the cash fare to points at 1.5 cents per point", () => {
   expect(cashToPoints(586)).toBe(39067);
+});
+
+test("includes a departure in the next winter even when the trip runs past that season", () => {
+  const winter = { label: "Winter 2027-28", departureDate: "2027-12-01", returnDate: "2028-02-29" };
+  expect(sailingDepartsInSeason("2028-01-20", winter)).toBe(true);
+  expect(sailingDepartsInSeason("2027-11-30", winter)).toBe(false);
+
+  const windows = selectCruiseWindows([
+    sailing({ id: "next-winter", departureDate: "2028-01-15", returnDate: "2028-01-22", cashAmount: 510 }),
+    sailing({ id: "too-early", departureDate: "2027-06-20", returnDate: "2027-06-27", cashAmount: 300 }),
+  ], [winter]);
+
+  expect(windows[0].offers.map((offer) => offer.id)).toEqual(["next-winter"]);
 });
 
 test("keeps only round trips from Galveston and the four cheapest per break", () => {

@@ -50,6 +50,20 @@ export const schoolBreaks: FareWindow[] = [
   { label: "Summer Break", departureDate: "2027-06-18", returnDate: "2027-07-09" },
 ];
 
+// McKinney ISD has not published a 2027-28 calendar. After the current school breaks,
+// cruise seasons are whole seasons through winter 2028-29 (about 29 months from Sep 2026),
+// which covers the 16-month horizon and the usual cruise booking window.
+export const cruiseWindows: FareWindow[] = [
+  ...schoolBreaks,
+  { label: "Late Summer 2027", departureDate: "2027-07-12", returnDate: "2027-08-31" },
+  { label: "Fall 2027", departureDate: "2027-09-01", returnDate: "2027-11-30" },
+  { label: "Winter 2027-28", departureDate: "2027-12-01", returnDate: "2028-02-29" },
+  { label: "Spring 2028", departureDate: "2028-03-01", returnDate: "2028-05-31" },
+  { label: "Summer 2028", departureDate: "2028-06-01", returnDate: "2028-08-31" },
+  { label: "Fall 2028", departureDate: "2028-09-01", returnDate: "2028-11-30" },
+  { label: "Winter 2028-29", departureDate: "2028-12-01", returnDate: "2029-02-28" },
+];
+
 export const californiaAirports: CaliforniaAirport[] = [
   { origin: "DFW", destination: "SJC", label: "San Jose, California" },
   { origin: "DFW", destination: "SFO", label: "San Francisco, California" },

@@ -1,4 +1,4 @@
-import { cruiseSearch, schoolBreaks } from "./config";
+import { cruiseSearch, cruiseWindows, schoolBreaks } from "./config";
 import { fetchCruiseLines, type ParsedCruiseSailing } from "./cruise-lines";
 import type { CruiseOffer, CruiseWindowSection, FareWindow, SourceResult } from "./types";
 
@@ -20,9 +20,22 @@ export function sailingFitsWindow(departureDate: string, returnDate: string, win
   return departureDate >= earliestDeparture && returnDate <= latestReturn && returnDate > departureDate;
 }
 
+const schoolBreakLabels = new Set(schoolBreaks.map((window) => window.label));
+
+export function sailingDepartsInSeason(departureDate: string, window: FareWindow) {
+  return departureDate >= window.departureDate && departureDate <= window.returnDate;
+}
+
+function sailingMatchesWindow(sailing: ParsedCruiseSailing, window: FareWindow) {
+  if (schoolBreakLabels.has(window.label)) {
+    return sailingFitsWindow(sailing.departureDate, sailing.returnDate, window);
+  }
+  return sailingDepartsInSeason(sailing.departureDate, window);
+}
+
 export function selectCruiseWindows(
   sailings: ParsedCruiseSailing[],
-  windows: FareWindow[] = schoolBreaks,
+  windows: FareWindow[] = cruiseWindows,
 ): CruiseWindowSection[] {
   return windows.map((window) => {
     const seen = new Set<string>();
@@ -30,7 +43,7 @@ export function selectCruiseWindows(
       .filter((sailing) => (
         sailing.roundtrip
         && sailing.departurePortCode === cruiseSearch.portCode
-        && sailingFitsWindow(sailing.departureDate, sailing.returnDate, window)
+        && sailingMatchesWindow(sailing, window)
       ))
       .sort((a, b) => a.cashAmount - b.cashAmount || a.departureDate.localeCompare(b.departureDate))
       .filter((sailing) => !seen.has(sailing.id) && Boolean(seen.add(sailing.id)))
