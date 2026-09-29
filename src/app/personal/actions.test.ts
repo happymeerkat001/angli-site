@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   refreshAnywhereSeason: vi.fn(),
   refreshNewsState: vi.fn(),
   refreshStockState: vi.fn(),
+  selectCruiseSeason: vi.fn(),
   revalidatePath: vi.fn(),
   revalidateTag: vi.fn(),
 }));
@@ -28,6 +29,10 @@ vi.mock("@/lib/dashboard/flight-refresh", () => ({
   refreshAnywhereSeason: mocks.refreshAnywhereSeason,
 }));
 
+vi.mock("@/lib/dashboard/cruise-refresh", () => ({
+  refreshCruiseState: vi.fn(),
+  selectCruiseSeason: mocks.selectCruiseSeason,
+}));
 vi.mock("@/lib/dashboard/news-refresh", () => ({ refreshNewsState: mocks.refreshNewsState }));
 vi.mock("@/lib/dashboard/stock-refresh", () => ({ refreshStockState: mocks.refreshStockState }));
 
@@ -36,7 +41,7 @@ vi.mock("next/cache", () => ({
   revalidateTag: mocks.revalidateTag,
 }));
 
-import { refreshNews, refreshStockAnalysis, setAnywhereSeason, uploadSchedulePhoto } from "./actions";
+import { refreshNews, refreshStockAnalysis, setAnywhereSeason, setCruiseSeason, uploadSchedulePhoto } from "./actions";
 
 const originalKvUrl = process.env.KV_REST_API_URL;
 const originalBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
@@ -148,6 +153,16 @@ test("refreshes only the submitted anywhere season and revalidates the personal 
   await setAnywhereSeason(formData);
 
   expect(mocks.refreshAnywhereSeason).toHaveBeenCalledWith("Winter Break");
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
+});
+
+test("switches the cruise season without refreshing cruise prices", async () => {
+  const formData = new FormData();
+  formData.set("season", "Winter 2027-28");
+
+  await setCruiseSeason(formData);
+
+  expect(mocks.selectCruiseSeason).toHaveBeenCalledWith("Winter 2027-28");
   expect(mocks.revalidatePath).toHaveBeenCalledWith("/personal");
 });
 

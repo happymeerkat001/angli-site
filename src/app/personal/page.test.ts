@@ -21,6 +21,9 @@ test("places the cruise section below the flight sections", async () => {
   expect(cruises).toBeGreaterThan(anywhere);
   expect(page).toContain("Refresh cruises");
   expect(page).toContain("readCruiseState");
+  expect(page).toContain("setCruiseSeason");
+  expect(page).toContain("Cruise season");
+  expect(page).toContain("cruiseWindows");
 });
 
 test("reads cached news and stock state instead of fetching them during render", async () => {

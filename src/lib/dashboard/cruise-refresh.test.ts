@@ -19,7 +19,9 @@ vi.mock("./cruises", () => ({
   getCruiseDashboard: mocks.getCruiseDashboard,
 }));
 
-import { refreshCruiseState } from "./cruise-refresh";
+import { cruiseWindows } from "./config";
+import { nearestUpcomingWindow } from "./flex-dates";
+import { refreshCruiseState, selectCruiseSeason } from "./cruise-refresh";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -28,6 +30,7 @@ afterEach(() => {
 test("keeps the previous cruise snapshot when the refresh fails", async () => {
   const previous = {
     windows: { status: "ok" as const, value: [] },
+    seasonLabel: "Winter 2027-28",
     fetchedAt: "2026-09-01T00:00:00.000Z",
   };
   mocks.acquireCruiseRefreshLock.mockResolvedValue(true);
@@ -38,9 +41,43 @@ test("keeps the previous cruise snapshot when the refresh fails", async () => {
 
   expect(mocks.writeCruiseState).toHaveBeenCalledWith({
     windows: previous.windows,
+    seasonLabel: "Winter 2027-28",
     fetchedAt: expect.any(String),
   });
   expect(mocks.releaseCruiseRefreshLock).toHaveBeenCalledOnce();
+});
+
+test("switches season without fetching cruise prices", async () => {
+  const previous = {
+    windows: { status: "ok" as const, value: [] },
+    seasonLabel: "Fall Break",
+    fetchedAt: "2026-09-01T00:00:00.000Z",
+  };
+  mocks.acquireCruiseRefreshLock.mockResolvedValue(true);
+  mocks.readCruiseState.mockResolvedValue(previous);
+
+  await expect(selectCruiseSeason("Fall 2027")).resolves.toEqual({ ok: true });
+
+  expect(mocks.getCruiseDashboard).not.toHaveBeenCalled();
+  expect(mocks.writeCruiseState).toHaveBeenCalledWith({
+    windows: previous.windows,
+    seasonLabel: "Fall 2027",
+    fetchedAt: previous.fetchedAt,
+  });
+});
+
+test("falls back to the nearest season when the saved label is unknown", async () => {
+  mocks.acquireCruiseRefreshLock.mockResolvedValue(true);
+  mocks.readCruiseState.mockResolvedValue(null);
+  mocks.getCruiseDashboard.mockResolvedValue({ status: "ok", value: [] });
+
+  await refreshCruiseState();
+
+  expect(mocks.writeCruiseState).toHaveBeenCalledWith({
+    windows: { status: "ok", value: [] },
+    seasonLabel: nearestUpcomingWindow(new Date(), cruiseWindows).label,
+    fetchedAt: expect.any(String),
+  });
 });
 
 test("does not fetch when a cruise refresh is already running", async () => {

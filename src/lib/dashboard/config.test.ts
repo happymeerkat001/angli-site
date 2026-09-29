@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, cruiseLines, cruiseSearch, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
+import { californiaAirports, cruiseLines, cruiseSearch, cruiseWindows, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -37,7 +37,7 @@ test("configures the fixed Summer 2027 fare search", () => {
   });
 });
 
-test("configures Galveston cruise search on the same school breaks", () => {
+test("configures Galveston cruise search past the current school year", () => {
   expect(cruiseSearch).toEqual({
     portCode: "GAL",
     portName: "Galveston",
@@ -54,6 +54,9 @@ test("configures Galveston cruise search on the same school breaks", () => {
     "Disney",
     "Princess",
   ]);
+  expect(cruiseWindows.slice(0, schoolBreaks.length)).toEqual(schoolBreaks);
+  expect(cruiseWindows.at(-1)).toEqual({ label: "Winter 2028-29", departureDate: "2028-12-01", returnDate: "2029-02-28" });
+  expect(cruiseWindows.find((window) => window.label === "Winter 2027-28")?.departureDate).toBe("2027-12-01");
 });
 
 test("configures the monthly SerpApi renewal day", () => {
