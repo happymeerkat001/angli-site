@@ -2,7 +2,7 @@ import { cruiseSearch, cruiseWindows, schoolBreaks } from "./config";
 import { fetchCruiseLines, type ParsedCruiseSailing } from "./cruise-lines";
 import type { CruiseOffer, CruiseWindowSection, FareWindow, SourceResult } from "./types";
 
-export { carnivalSearchUrl, parseCarnivalItineraries, type ParsedCruiseSailing } from "./cruise-lines";
+export { type ParsedCruiseSailing } from "./cruise-lines";
 
 export function cashToPoints(amount: number, centsPerPoint = cruiseSearch.pointsCentsPerPoint) {
   return Math.round((amount * 100) / centsPerPoint);

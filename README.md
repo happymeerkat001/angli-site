@@ -60,9 +60,11 @@ Vercel environment variables:
   route falls back to "Live price unavailable today")
 - Cruise prices do not use that key. There is no public multi-line pricing
   API (Traveltek Cruise Connect requires agency credentials), so refresh
-  cruises reads each line's own Galveston search: Carnival, Royal Caribbean,
-  Norwegian, MSC, Disney, and Princess. Round trip, same school-break dates,
-  ±2 days. No private cruise API key is stored. Princess uses the public
+  cruises reads each line's own Galveston search: Royal Caribbean,
+  Norwegian, and Princess. Round trip, same school-break dates,
+  ±2 days. Party size is `cruiseParty` in `src/lib/dashboard/config.ts`:
+  adults plus children with ages, defaulting to 2 adults until ages are
+  added. No private cruise API key is stored. Princess uses the public
   storefront client id its website already publishes. A line that fails is
   skipped so the others still refresh. Points on each card are the cash fare
   converted at 1.5¢ per point.

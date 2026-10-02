@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { californiaAirports, cruiseLines, cruiseSearch, cruiseWindows, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
+import { californiaAirports, cruiseGuestCount, cruiseLines, cruiseParty, cruisePartyLabel, cruiseSearch, cruiseWindows, fareSearch, flightRoutes, newsSources, schoolBreaks, serpApiRenewalDay } from "./config";
 
 test("configures the requested flight routes and HTTPS news sources", () => {
   expect(flightRoutes.map((route) => route.destination)).toEqual([
@@ -41,17 +41,18 @@ test("configures Galveston cruise search past the current school year", () => {
   expect(cruiseSearch).toEqual({
     portCode: "GAL",
     portName: "Galveston",
-    adults: 2,
     flexDays: 2,
     pointsCentsPerPoint: 1.5,
     offersPerWindow: 4,
   });
+  expect(cruiseParty).toEqual({ adults: 2, children: [] });
+  expect(cruiseGuestCount()).toBe(2);
+  expect(cruisePartyLabel()).toBe("2 adults");
+  expect(cruiseGuestCount({ adults: 2, children: [{ age: 8 }, { age: 11 }] })).toBe(4);
+  expect(cruisePartyLabel({ adults: 2, children: [{ age: 8 }, { age: 11 }] })).toBe("2 adults and 2 children (ages 8, 11)");
   expect(cruiseLines).toEqual([
-    "Carnival",
     "Royal Caribbean",
     "Norwegian",
-    "MSC",
-    "Disney",
     "Princess",
   ]);
   expect(cruiseWindows.slice(0, schoolBreaks.length)).toEqual(schoolBreaks);

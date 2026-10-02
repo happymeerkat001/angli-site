@@ -5,7 +5,7 @@ import { readFlightState } from "@/lib/dashboard/flight-store";
 import { readNewsState } from "@/lib/dashboard/news-store";
 import { readSchedulePhotoState } from "@/lib/dashboard/schedule-photo-store";
 import { readStockState } from "@/lib/dashboard/stock-store";
-import { cruiseLines, cruiseSearch, cruiseWindows, fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
+import { cruiseLines, cruisePartyLabel, cruiseSearch, cruiseWindows, fareSearch, schoolBreaks, serpApiRenewalDay } from "@/lib/dashboard/config";
 import { isWithinLookaheadWindow, nearestUpcomingWindow, nextSerpApiReset, subtractMonths } from "@/lib/dashboard/flex-dates";
 import { WeekGrid } from "@/components/WeekGrid";
 import { RefreshButton } from "@/components/RefreshButton";
@@ -208,7 +208,7 @@ export default async function PersonalPage() {
         <SeasonSelect action={setCruiseSeason} currentSeason={currentCruiseSeason} label="Cruise season" pendingLabel="Switching…" seasons={cruiseSeasonLabels} />
         <p className="mb-4 text-sm text-muted">Last refreshed: {cruiseState?.fetchedAt ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(new Date(cruiseState.fetchedAt)) : "Not yet refreshed"}</p>
         <p className="mb-4 text-sm text-muted">
-          Galveston round trips from {cruiseLines.join(", ")}, one season at a time. Refresh loads every season in one search; the menu only changes which season is on screen. School-break seasons use the same dates as the flights, and a sailing can start or end up to {cruiseSearch.flexDays} days outside the break. From late summer 2027 through winter 2028-29, any round trip that departs in that season is included. Cash is the cheapest available cabin, per person, for two guests. Points are that same cash fare at {cruiseSearch.pointsCentsPerPoint}¢ per point. If one cruise line is unavailable, the others still show.
+          Galveston round trips from {cruiseLines.join(", ")}, one season at a time. Refresh loads every season in one search; the menu only changes which season is on screen. School-break seasons use the same dates as the flights, and a sailing can start or end up to {cruiseSearch.flexDays} days outside the break. From late summer 2027 through winter 2028-29, any round trip that departs in that season is included. Cash is the cheapest available cabin, per person, for {cruisePartyLabel()}. Points are that same cash fare at {cruiseSearch.pointsCentsPerPoint}¢ per point. If one cruise line is unavailable, the others still show.
         </p>
         <div className="mb-6 flex items-center gap-3">
           <Ship className="text-accent" aria-hidden="true" />

@@ -1,4 +1,4 @@
-import { cruiseLines, cruiseSearch } from "./config";
+import { cruiseGuestCount, cruiseLines, cruiseParty, cruiseSearch, type CruiseChild } from "./config";
 import { absoluteUrl, fetchJson, isRecord, isoDate } from "./cruise-http";
 
 export type ParsedCruiseSailing = {
@@ -21,115 +21,12 @@ export type CruiseLineFetch = {
   sailings: ParsedCruiseSailing[];
 };
 
-type CarnivalRoom = {
-  price?: unknown;
-  soldOut?: unknown;
-  taxesAndFees?: unknown;
-};
-
-type CarnivalSailing = {
-  departureDate?: unknown;
-  arrivalDate?: unknown;
-  rooms?: Record<string, CarnivalRoom | undefined>;
-  lowestPrice?: unknown;
-  sailingId?: unknown;
-  sailingURL?: unknown;
-};
-
-type CarnivalItinerary = {
-  roundtrip?: unknown;
-  sailings?: CarnivalSailing[];
-  itineraryTitle?: unknown;
-  departurePortCode?: unknown;
-  dur?: unknown;
-  shipName?: unknown;
-};
-
-type CarnivalSearchResponse = {
-  results?: {
-    itineraries?: CarnivalItinerary[];
-    lastPage?: unknown;
-  };
-};
-
-const carnivalOrigin = "https://www.carnival.com";
 const royalOrigin = "https://www.royalcaribbean.com";
 const norwegianOrigin = "https://www.ncl.com";
 const princessOrigin = "https://gw.api.princess.com/pcl-web/internal";
 const princessSite = "https://www.princess.com";
 // Public storefront client id published in princess.com's cruise-search bundle. Not a private credential.
 const princessClientId = "32e7224ac6cc41302f673c5f5d27b4ba";
-
-export function carnivalSearchUrl(pageNumber: number) {
-  const params = new URLSearchParams({
-    numAdults: String(cruiseSearch.adults),
-    port: cruiseSearch.portCode,
-    pageSize: "50",
-    pageNumber: String(pageNumber),
-  });
-  return `${carnivalOrigin}/cruisesearch/api/search?${params.toString()}`;
-}
-
-function roomFare(room: CarnivalRoom | undefined) {
-  if (!room || room.soldOut === true) return null;
-  const price = typeof room.price === "number" ? room.price : null;
-  if (price === null || price <= 0) return null;
-  const taxes = typeof room.taxesAndFees === "number" && room.taxesAndFees > 0 ? room.taxesAndFees : 0;
-  return price + taxes;
-}
-
-function lowestCabinFare(sailing: CarnivalSailing) {
-  const rooms = Object.values(sailing.rooms ?? {});
-  const fares = rooms.flatMap((room) => {
-    const fare = roomFare(room);
-    return fare === null ? [] : [fare];
-  });
-  if (fares.length > 0) return Math.min(...fares);
-  return typeof sailing.lowestPrice === "number" && sailing.lowestPrice > 0 ? sailing.lowestPrice : null;
-}
-
-export function parseCarnivalItineraries(itineraries: CarnivalItinerary[]): ParsedCruiseSailing[] {
-  return itineraries.flatMap((itinerary) => {
-    const title = typeof itinerary.itineraryTitle === "string" ? itinerary.itineraryTitle : null;
-    const ship = typeof itinerary.shipName === "string" ? itinerary.shipName : null;
-    const departurePortCode = typeof itinerary.departurePortCode === "string" ? itinerary.departurePortCode : null;
-    const nights = typeof itinerary.dur === "number" ? itinerary.dur : null;
-    if (!title || !ship || !departurePortCode || nights === null) return [];
-
-    return (itinerary.sailings ?? []).flatMap((sailing) => {
-      const id = typeof sailing.sailingId === "string" ? sailing.sailingId : null;
-      const departureDate = isoDate(sailing.departureDate);
-      const returnDate = isoDate(sailing.arrivalDate);
-      const cashAmount = lowestCabinFare(sailing);
-      if (!id || !departureDate || !returnDate || cashAmount === null) return [];
-      return [{
-        id: `carnival:${id}`,
-        line: "Carnival",
-        ship,
-        title,
-        departurePortCode,
-        roundtrip: itinerary.roundtrip === true,
-        departureDate,
-        returnDate,
-        nights,
-        cashAmount,
-        url: absoluteUrl(carnivalOrigin, sailing.sailingURL, `${carnivalOrigin}/cruisesearch/search?port=${cruiseSearch.portCode}`),
-      }];
-    });
-  });
-}
-
-async function fetchCarnivalPage(pageNumber: number) {
-  return await fetchJson(carnivalSearchUrl(pageNumber)) as CarnivalSearchResponse;
-}
-
-export async function fetchCarnivalSailings() {
-  const first = await fetchCarnivalPage(1);
-  const lastPage = typeof first.results?.lastPage === "number" ? Math.min(first.results.lastPage, 10) : 1;
-  const pages = [first];
-  for (let page = 2; page <= lastPage; page += 1) pages.push(await fetchCarnivalPage(page));
-  return parseCarnivalItineraries(pages.flatMap((page) => page.results?.itineraries ?? []));
-}
 
 const royalQuery = `query cruiseSearch_Cruises($filters: String, $pagination: CruiseSearchPagination) {
   cruiseSearch(filters: $filters, pagination: $pagination) {
@@ -317,7 +214,7 @@ async function fetchNorwegianItineraries() {
   while (offset < total && offset < 200) {
     const params = new URLSearchParams({
       embPorts: cruiseSearch.portCode,
-      guests: String(cruiseSearch.adults),
+      guests: String(cruiseGuestCount()),
       limit: "50",
       offset: String(offset),
     });
@@ -340,7 +237,7 @@ export async function fetchNorwegianSailings() {
   ));
   const details = await Promise.all(roundTrips.map(async (itinerary) => {
     try {
-      const detail = await fetchJson(`${norwegianOrigin}/api/vacations/search/${itinerary.code}?guests=${cruiseSearch.adults}`);
+      const detail = await fetchJson(`${norwegianOrigin}/api/vacations/search/${itinerary.code}?guests=${cruiseGuestCount()}`);
       return parseNorwegianItinerary(itinerary, isRecord(detail) ? detail as NorwegianDetail : {});
     } catch (error) {
       console.error(`Norwegian itinerary unavailable: ${String(itinerary.code)}`, error);
@@ -424,6 +321,13 @@ export function parsePrincessSailings(
   });
 }
 
+export function princessBookingGuests(party: { adults: number; children: readonly CruiseChild[] } = cruiseParty) {
+  return [
+    ...Array.from({ length: party.adults }, () => ({ country: "US", homeCity: "LAX" })),
+    ...party.children.map((child) => ({ country: "US", homeCity: "LAX", age: child.age })),
+  ];
+}
+
 function princessHeaders() {
   return {
     Origin: princessSite,
@@ -445,10 +349,7 @@ async function fetchPrincessPrices(voyageIds: string[]) {
         booking: {
           bookingAgency: { id: "DIRPB", currency: "USD" },
           currencyCode: "USD",
-          guests: [
-            { country: "US", homeCity: "LAX" },
-            { country: "US", homeCity: "LAX" },
-          ],
+          guests: princessBookingGuests(),
           promos: [],
         },
         filters: {
@@ -498,43 +399,9 @@ export async function fetchPrincessSailings() {
   return parsePrincessSailings(products, ships, prices);
 }
 
-// MSC's consumer site and Disney's sailing search both reject this refresh without
-// a session or access token. The request stays here so a later public response can
-// be parsed, and a rejection does not hide the other lines.
-export async function fetchMscSailings(): Promise<ParsedCruiseSailing[]> {
-  const params = new URLSearchParams({
-    departurePort: cruiseSearch.portCode,
-    adults: String(cruiseSearch.adults),
-  });
-  await fetchJson(`https://www.msccruisesusa.com/api/search/cruises?${params.toString()}`);
-  throw new Error("MSC search response could not be read");
-}
-
-export async function fetchDisneySailings(): Promise<ParsedCruiseSailing[]> {
-  await fetchJson("https://disneycruise.disney.go.com/dcl-apps-sailingavailability-vas/sailing-availability/v1/available-sailings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Origin: "https://disneycruise.disney.go.com",
-    },
-    body: JSON.stringify({
-      currency: "USD",
-      filters: [],
-      partyMix: [{ adultCount: cruiseSearch.adults, childCount: 0, accessible: false }],
-      region: "US",
-      storeId: "DCL",
-      affiliations: [],
-    }),
-  });
-  throw new Error("Disney search response could not be read");
-}
-
 const lineFetchers: Record<(typeof cruiseLines)[number], () => Promise<ParsedCruiseSailing[]>> = {
-  Carnival: fetchCarnivalSailings,
   "Royal Caribbean": fetchRoyalSailings,
   Norwegian: fetchNorwegianSailings,
-  MSC: fetchMscSailings,
-  Disney: fetchDisneySailings,
   Princess: fetchPrincessSailings,
 };
 

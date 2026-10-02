@@ -75,18 +75,39 @@ export const serpApiRenewalDay = 16;
 export const cruiseSearch = {
   portCode: "GAL",
   portName: "Galveston",
-  adults: 2,
   flexDays: 2,
   pointsCentsPerPoint: 1.5,
   offersPerWindow: 4,
 } as const;
 
+export type CruiseChild = {
+  age: number;
+};
+
+// Cabin prices use this party. Leave children empty until each child's age is known.
+export const cruiseParty: {
+  adults: number;
+  children: readonly CruiseChild[];
+} = {
+  adults: 2,
+  children: [],
+};
+
+export function cruiseGuestCount(party: { adults: number; children: readonly { age: number }[] } = cruiseParty) {
+  return party.adults + party.children.length;
+}
+
+export function cruisePartyLabel(party: { adults: number; children: readonly { age: number }[] } = cruiseParty) {
+  const adults = `${party.adults} ${party.adults === 1 ? "adult" : "adults"}`;
+  if (party.children.length === 0) return adults;
+  const ages = party.children.map((child) => child.age).join(", ");
+  const noun = party.children.length === 1 ? "child" : "children";
+  return `${adults} and ${party.children.length} ${noun} (ages ${ages})`;
+}
+
 export const cruiseLines = [
-  "Carnival",
   "Royal Caribbean",
   "Norwegian",
-  "MSC",
-  "Disney",
   "Princess",
 ] as const;
 

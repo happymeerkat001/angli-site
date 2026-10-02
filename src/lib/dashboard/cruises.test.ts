@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { schoolBreaks } from "./config";
-import { parseNorwegianItinerary, parsePrincessSailings, parseRoyalCruiseSearch } from "./cruise-lines";
-import { carnivalSearchUrl, cashToPoints, getCruiseDashboard, parseCarnivalItineraries, sailingDepartsInSeason, sailingFitsWindow, selectCruiseWindows, type ParsedCruiseSailing } from "./cruises";
+import { parseNorwegianItinerary, parsePrincessSailings, parseRoyalCruiseSearch, princessBookingGuests } from "./cruise-lines";
+import { cashToPoints, getCruiseDashboard, sailingDepartsInSeason, sailingFitsWindow, selectCruiseWindows, type ParsedCruiseSailing } from "./cruises";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -10,8 +10,8 @@ afterEach(() => {
 function sailing(overrides: Partial<ParsedCruiseSailing> = {}): ParsedCruiseSailing {
   return {
     id: "20895",
-    line: "Carnival",
-    ship: "Carnival Breeze",
+    line: "Royal Caribbean",
+    ship: "Liberty of the Seas",
     title: "5-Day Western Caribbean from Galveston, TX",
     departurePortCode: "GAL",
     roundtrip: true,
@@ -19,7 +19,7 @@ function sailing(overrides: Partial<ParsedCruiseSailing> = {}): ParsedCruiseSail
     returnDate: "2026-10-14",
     nights: 5,
     cashAmount: 586,
-    url: "https://www.carnival.com/booking?sailingID=20895",
+    url: "https://www.royalcaribbean.com/booking?sailingID=20895",
     ...overrides,
   };
 }
@@ -72,78 +72,70 @@ test("keeps only round trips from Galveston and the four cheapest per break", ()
   });
 });
 
-test("parses Carnival cabin fares and ignores sold-out rooms", () => {
-  const parsed = parseCarnivalItineraries([{
-    roundtrip: true,
-    itineraryTitle: "4-Day Western Caribbean from Galveston, TX",
-    departurePortCode: "GAL",
-    dur: 4,
-    shipName: "Carnival Jubilee",
-    sailings: [{
-      sailingId: "99",
-      departureDate: "2026-11-21T00:00:00.000Z",
-      arrivalDate: "2026-11-25T00:00:00.000Z",
-      sailingURL: "/booking?sailingID=99",
-      rooms: {
-        interior: { price: 499, soldOut: false, taxesAndFees: 20 },
-        suite: { price: 0, soldOut: true },
-      },
-    }],
-  }]);
-
-  expect(parsed).toEqual([expect.objectContaining({
-    id: "carnival:99",
-    cashAmount: 519,
-    departureDate: "2026-11-21",
-    returnDate: "2026-11-25",
-    url: "https://www.carnival.com/booking?sailingID=99",
-  })]);
+test("prices the configured party and defaults to two adults", () => {
+  expect(princessBookingGuests()).toEqual([
+    { country: "US", homeCity: "LAX" },
+    { country: "US", homeCity: "LAX" },
+  ]);
+  expect(princessBookingGuests({ adults: 2, children: [{ age: 8 }, { age: 11 }] })).toEqual([
+    { country: "US", homeCity: "LAX" },
+    { country: "US", homeCity: "LAX" },
+    { country: "US", homeCity: "LAX", age: 8 },
+    { country: "US", homeCity: "LAX", age: 11 },
+  ]);
 });
 
-test("requests every Galveston results page and groups sailings by school break", async () => {
-  const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input) => {
-    const page = new URL(input.toString()).searchParams.get("pageNumber");
-    const itinerary = page === "1"
-      ? {
-        roundtrip: true,
-        itineraryTitle: "5-Day Western Caribbean from Galveston, TX",
-        departurePortCode: "GAL",
-        dur: 5,
-        shipName: "Carnival Breeze",
-        sailings: [{
-          sailingId: "fall",
-          departureDate: "2026-10-10T00:00:00.000Z",
-          arrivalDate: "2026-10-15T00:00:00.000Z",
-          lowestPrice: 450,
-          sailingURL: "/booking?sailingID=fall",
-          rooms: { interior: { price: 450, soldOut: false } },
-        }],
-      }
-      : {
-        roundtrip: true,
-        itineraryTitle: "7-Day Western Caribbean from Galveston, TX",
-        departurePortCode: "GAL",
-        dur: 7,
-        shipName: "Carnival Dream",
-        sailings: [{
-          sailingId: "thanks",
-          departureDate: "2026-11-21T00:00:00.000Z",
-          arrivalDate: "2026-11-28T00:00:00.000Z",
-          sailingURL: "/booking?sailingID=thanks",
-          rooms: { interior: { price: 620, soldOut: false } },
-        }],
-      };
-    return new Response(JSON.stringify({ results: { lastPage: 2, itineraries: [itinerary] } }), { status: 200 });
+test("requests each Royal Caribbean Galveston page and groups sailings by school break", async () => {
+  const fetchMock = vi.spyOn(global, "fetch").mockImplementation(async (input, init) => {
+    const url = String(input);
+    if (!url.includes("royalcaribbean.com")) return new Response("unavailable", { status: 503 });
+    const body = JSON.parse(String(init?.body)) as { variables: { pagination: { skip: number } } };
+    const skip = body.variables.pagination.skip;
+    const sailing = skip === 0
+      ? { id: "fall", startDate: "2026-10-10", endDate: "2026-10-15", price: 450 }
+      : { id: "thanks", startDate: "2026-11-21", endDate: "2026-11-28", price: 620 };
+    return new Response(JSON.stringify({
+      data: {
+        cruiseSearch: {
+          results: {
+            total: 2,
+            cruises: [{
+              masterSailing: {
+                itinerary: {
+                  name: "Western Caribbean Cruise",
+                  sailingNights: 5,
+                  ship: { name: "Liberty of the Seas" },
+                  departurePort: { code: "GAL" },
+                  days: [{ ports: [{ port: { code: "GAL" } }] }, { ports: [{ port: { code: "GAL" } }] }],
+                },
+              },
+              sailings: [{
+                id: sailing.id,
+                startDate: sailing.startDate,
+                endDate: sailing.endDate,
+                bookingLink: `/booking?id=${sailing.id}`,
+                taxesAndFeesIncluded: true,
+                stateroomClassPricing: [{ price: { value: sailing.price } }],
+              }],
+            }],
+          },
+        },
+      },
+    }), { status: 200 });
   });
 
   const dashboard = await getCruiseDashboard();
 
-  const carnivalCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes("carnival.com"));
-  expect(carnivalCalls).toHaveLength(2);
-  expect(new URL(carnivalSearchUrl(1)).searchParams.get("port")).toBe("GAL");
+  const royalCalls = fetchMock.mock.calls.filter(([input]) => String(input).includes("royalcaribbean.com"));
+  expect(royalCalls).toHaveLength(2);
+  const norwegianSearch = fetchMock.mock.calls.map(([input]) => String(input)).find((url) => url.includes("ncl.com/api/v2/vacations/search"));
+  expect(norwegianSearch && new URL(norwegianSearch).searchParams.get("guests")).toBe("2");
+  const firstBody = JSON.parse(String(royalCalls[0]?.[1]?.body)) as { variables: { filters: string; pagination: { skip: number } } };
+  expect(firstBody.variables.filters).toBe("departurePort:GAL");
+  expect(firstBody.variables.pagination.skip).toBe(0);
   expect(dashboard.status).toBe("ok");
   if (dashboard.status !== "ok") return;
-  expect(dashboard.value.find((window) => window.windowLabel === "Fall Break")?.offers[0]?.id).toBe("carnival:fall");
+  expect(dashboard.value.find((window) => window.windowLabel === "Fall Break")?.offers[0]?.id).toBe("royal:fall");
   expect(dashboard.value.find((window) => window.windowLabel === "Thanksgiving Break")?.offers[0]?.cashAmount).toBe(620);
   expect(dashboard.value.find((window) => window.windowLabel === "Winter Break")?.offers).toEqual([]);
 });
